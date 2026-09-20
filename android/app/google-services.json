@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "938868509667",
+    "project_id": "dynamic-ledger-insight",
+    "storage_bucket": "dynamic-ledger-insight.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:938868509667:android:9c9bfbaa03f36b36eb2ed6",
+        "android_client_info": {
+          "package_name": "com.example.fincontrol"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDogpZFCDeDRT7WFkSk1fQJqV4C99KOxw8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:938868509667:android:d7f2668ac74afcf7eb2ed6",
+        "android_client_info": {
+          "package_name": "com.example.netviewdemo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDogpZFCDeDRT7WFkSk1fQJqV4C99KOxw8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
