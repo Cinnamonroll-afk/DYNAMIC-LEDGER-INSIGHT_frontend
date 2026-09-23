@@ -4,7 +4,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:fincontrol/features/auth/bloc/auth_bloc.dart';
 import 'package:fincontrol/features/auth/bloc/auth_event.dart';
 import 'package:fincontrol/features/auth/bloc/auth_state.dart';
-import 'package:fincontrol/features/auth/presentation/pages/login_page.dart';
 import 'package:fincontrol/features/settings/bloc/theme_cubit.dart';
 import 'package:fincontrol/features/settings/bloc/currency_cubit.dart';
 import 'package:fincontrol/features/auth/data/repositories/auth_repository.dart';
@@ -23,7 +22,7 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final AuthRepository _authRepo = AuthRepository();
   bool _isUploadingProfilePic = false;
-  
+
   Map<String, dynamic>? _user;
   bool _isLoading = true;
 
@@ -88,7 +87,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final textColor = Theme.of(context).textTheme.bodyLarge?.color;
     final mutedTextColor = Theme.of(context).textTheme.bodySmall?.color;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
+
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: Colors.transparent,
@@ -100,24 +99,13 @@ class _ProfilePageState extends State<ProfilePage> {
     String email = _user?['email'] ?? 'No email provided';
     String uid = _user?['id']?.toString() ?? 'Unknown';
     if (uid.length > 8) uid = uid.substring(0, 8);
-    
+
     String? photoUrl = _user?['photo_url'];
     if (photoUrl != null && !photoUrl.startsWith('http')) {
       photoUrl = '${_authRepo.baseUrl}$photoUrl';
     }
 
-    return BlocListener<AuthBloc, AuthState>(
-      listenWhen: (prev, curr) =>
-          prev.status != AuthStatus.initial && curr.status == AuthStatus.initial,
-      listener: (context, state) {
-        if (state.status == AuthStatus.initial) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const LoginPage()),
-            (route) => false,
-          );
-        }
-      },
-      child: Scaffold(
+    return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
         child: ListView(
@@ -251,7 +239,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             const SizedBox(height: 24),
-            
+
             _buildSectionHeader(l10n.accountAndSecurity, textColor),
             GlassContainer(
               padding: EdgeInsets.zero,
@@ -275,7 +263,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
             _buildSectionHeader(l10n.preferences, textColor),
             GlassContainer(
@@ -398,7 +386,6 @@ class _ProfilePageState extends State<ProfilePage> {
           ],
         ),
       ),
-    ),
     );
   }
 

@@ -3,7 +3,7 @@ import 'package:fincontrol/features/wealth/data/models/portfolio_model.dart';
 
 abstract class PortfolioEvent extends Equatable {
   const PortfolioEvent();
-  
+
   @override
   List<Object> get props => [];
 }
@@ -11,15 +11,19 @@ abstract class PortfolioEvent extends Equatable {
 class LoadPortfolios extends PortfolioEvent {
   final String userId;
   const LoadPortfolios(this.userId);
-  
+
   @override
   List<Object> get props => [userId];
+}
+
+class ClearPortfolios extends PortfolioEvent {
+  const ClearPortfolios();
 }
 
 class AddPortfolio extends PortfolioEvent {
   final PortfolioModel portfolio;
   const AddPortfolio(this.portfolio);
-  
+
   @override
   List<Object> get props => [portfolio];
 }
@@ -27,7 +31,7 @@ class AddPortfolio extends PortfolioEvent {
 class UpdatePortfolio extends PortfolioEvent {
   final PortfolioModel portfolio;
   const UpdatePortfolio(this.portfolio);
-  
+
   @override
   List<Object> get props => [portfolio];
 }
@@ -35,7 +39,7 @@ class UpdatePortfolio extends PortfolioEvent {
 class DeletePortfolio extends PortfolioEvent {
   final String id;
   const DeletePortfolio(this.id);
-  
+
   @override
   List<Object> get props => [id];
 }

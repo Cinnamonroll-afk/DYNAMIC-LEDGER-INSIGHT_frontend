@@ -1,4 +1,5 @@
 import 'package:fincontrol/features/wealth/presentation/pages/invest_page.dart';
+import 'package:fincontrol/l10n/app_localizations.dart';
 import 'package:fincontrol/features/wealth/presentation/pages/create_new_portfolio.dart';
 import 'package:fincontrol/features/wealth/bloc/portfolio_bloc.dart';
 import 'package:fincontrol/features/wealth/bloc/portfolio_event.dart';
@@ -81,7 +82,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
             Container(width: 40, height: 4,
               decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 20),
-            Text('Add Asset', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor)),
+            Text(AppLocalizations.of(context)!.addAssetBtn, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor)),
             const SizedBox(height: 20),
             // Option 1: From existing unassigned assets
             GestureDetector(
@@ -129,7 +130,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text('Add new from market', style: TextStyle(color: textColor, fontWeight: FontWeight.w700, fontSize: 15)),
-                        Text('Browse market and add a new asset', style: TextStyle(color: textColor?.withValues(alpha: 0.5), fontSize: 12)),
+                        Text(AppLocalizations.of(context)!.browseMarketAddNew, style: TextStyle(color: textColor?.withValues(alpha: 0.5), fontSize: 12)),
                       ]),
                     ),
                     Icon(Icons.arrow_forward_ios, color: primaryColor, size: 14),
@@ -172,7 +173,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
               const SizedBox(height: 20),
               Text('Select Assets', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
               const SizedBox(height: 4),
-              Text('Choose one or more assets to add to this goal', style: TextStyle(fontSize: 12, color: textColor?.withValues(alpha: 0.5))),
+              Text(AppLocalizations.of(context)!.chooseOneOrMoreAssets, style: TextStyle(fontSize: 12, color: textColor?.withValues(alpha: 0.5))),
               const SizedBox(height: 16),
               ConstrainedBox(
                 constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
@@ -278,7 +279,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -396,7 +397,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
           actions: widget.portfolio != null ? [
             TextButton.icon(
               icon: Icon(Icons.edit_outlined, color: textColor, size: 18),
-              label: Text('Edit', style: TextStyle(color: textColor, fontSize: 13)),
+              label: Text(AppLocalizations.of(context)!.editAction, style: TextStyle(color: textColor, fontSize: 13)),
               onPressed: () async {
                 await Navigator.push(
                   context,
@@ -432,7 +433,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Total Balance',
+                            AppLocalizations.of(context)!.totalBalance,
                             style: TextStyle(
                               color: mutedTextColor,
                               fontSize: 16,
@@ -452,42 +453,47 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: (assets.isEmpty ? primaryColor : returnColor).withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      assets.isEmpty
-                                          ? Icons.info_outline
-                                          : (isPositive ? Icons.arrow_upward : Icons.arrow_downward),
-                                      size: 14,
-                                      color: assets.isEmpty ? primaryColor : returnColor,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      assets.isNotEmpty
-                                          ? '${isPositive ? '+' : '-'}\$${totalReturn.abs().toStringAsFixed(2)} (${returnPercentage.abs().toStringAsFixed(1)}%)'
-                                          : (hasGoal
-                                              ? '${(goalProgress * 100).toStringAsFixed(0)}% of Target'
-                                              : 'No assets yet'),
-                                      style: TextStyle(
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: (assets.isEmpty ? primaryColor : returnColor).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        assets.isEmpty
+                                            ? Icons.info_outline
+                                            : (isPositive ? Icons.arrow_upward : Icons.arrow_downward),
+                                        size: 14,
                                         color: assets.isEmpty ? primaryColor : returnColor,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          assets.isNotEmpty
+                                              ? '${isPositive ? '+' : '-'}\$${totalReturn.abs().toStringAsFixed(2)} (${returnPercentage.abs().toStringAsFixed(1)}%)'
+                                              : (hasGoal
+                                                  ? '${(goalProgress * 100).toStringAsFixed(0)}% of Target'
+                                                  : 'No assets yet'),
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: assets.isEmpty ? primaryColor : returnColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                               if (assets.isNotEmpty) ...[
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Total Return',
+                                  AppLocalizations.of(context)!.totalReturn,
                                   style: TextStyle(
                                     color: mutedTextColor,
                                     fontSize: 12,
@@ -554,7 +560,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'My Investments',
+                    AppLocalizations.of(context)!.myPortfolio,
                     style: TextStyle(
                       color: textColor,
                       fontSize: 20,
@@ -565,7 +571,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                     TextButton.icon(
                       onPressed: () => _showAddAssetSheet(context),
                       icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Add Asset'),
+                      label: Text(AppLocalizations.of(context)!.addAssetBtn),
                       style: TextButton.styleFrom(
                         foregroundColor: primaryColor,
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -581,7 +587,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'This portfolio is currently empty',
+                              AppLocalizations.of(context)!.thisPortfolioEmpty,
                               style: TextStyle(
                                 color: textColor,
                                 fontWeight: FontWeight.bold,
@@ -601,8 +607,8 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                                   ),
                                 ),
                                 onPressed: () => _showAddAssetSheet(context),
-                                child: const Text(
-                                  'Add Asset',
+                                child: Text(
+                                  AppLocalizations.of(context)!.addAssetBtn,
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.bold,
@@ -670,8 +676,8 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                                           _optionTile(
                                             icon: Icons.edit_outlined,
                                             color: pc,
-                                            title: 'Edit',
-                                            subtitle: 'Change quantity or buy price',
+                                            title: AppLocalizations.of(context)!.editAction,
+                                            subtitle: AppLocalizations.of(context)!.changeQtyBuyPrice,
                                             onTap: () {
                                               Navigator.pop(sheetCtx);
                                               showModalBottomSheet(
@@ -687,8 +693,8 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                                           _optionTile(
                                             icon: Icons.link_off,
                                             color: Colors.orangeAccent,
-                                            title: 'Remove from this goal',
-                                            subtitle: 'Asset is NOT deleted — moves to Unassigned Assets',
+                                            title: AppLocalizations.of(context)!.removeFromGoal,
+                                            subtitle: AppLocalizations.of(context)!.removeFromGoalSubtitle,
                                             onTap: () {
                                               context.read<AssetBloc>().add(UpdateAsset(asset.copyWith(portfolioId: '')));
                                               Navigator.pop(sheetCtx);
@@ -699,8 +705,8 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                                           _optionTile(
                                             icon: Icons.delete_outline,
                                             color: Colors.redAccent,
-                                            title: 'Delete permanently',
-                                            subtitle: 'Removes this asset and all its data forever',
+                                            title: AppLocalizations.of(context)!.deletePermanently,
+                                            subtitle: AppLocalizations.of(context)!.deletePermanentlySubtitle,
                                             onTap: () {
                                               context.read<AssetBloc>().add(DeleteAsset(asset.id));
                                               Navigator.pop(sheetCtx);

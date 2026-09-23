@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AuthRepository {
-  // Use 10.0.2.2 for localhost access from Android Emulator
-  final String baseUrl = 'http://192.168.88.84:8000';
+  String get baseUrl => dotenv.env['BASE_URL'] ?? 'http://192.168.88.84:8000';
 
   Future<void> login(String email, String password) async {
     final response = await http.post(
@@ -21,6 +21,11 @@ class AuthRepository {
       final token = data['access_token'];
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('jwt_token', token);
+      // Store user_id for per-account features (PIN lock, etc.)
+      final user = await getUser();
+      if (user != null) {
+        await prefs.setString('user_id', user['id'].toString());
+      }
     } else {
       throw Exception('Login failed: ${response.body}');
     }
@@ -48,6 +53,7 @@ class AuthRepository {
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('jwt_token');
+    await prefs.remove('user_id');
   }
 
   Future<String?> getToken() async {

@@ -420,4 +420,169 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get netCashFlow => 'กระแสเงินสดสุทธิ';
+
+  @override
+  String get protectYourData => 'ปกป้องข้อมูลของคุณ';
+
+  @override
+  String get pinSetupDescription =>
+      'ตั้งรหัส PIN 6 หลักเพื่อรักษาความปลอดภัยข้อมูลการเงินของคุณ';
+
+  @override
+  String get setPinNow => 'ตั้งรหัส PIN ทันที';
+
+  @override
+  String get skipForNow => 'ข้ามไปก่อน';
+
+  @override
+  String get incorrectPin => 'รหัส PIN ไม่ถูกต้อง';
+
+  @override
+  String get pinSavedSuccessfully => 'บันทึกรหัส PIN สำเร็จ';
+
+  @override
+  String get pinsDoNotMatch => 'รหัส PIN ไม่ตรงกัน';
+
+  @override
+  String get appLockDisabled => 'ปิดการล็อกแอปแล้ว';
+
+  @override
+  String get enterCurrentPin => 'ใส่รหัส PIN ปัจจุบัน';
+
+  @override
+  String get enterNewPin => 'ใส่รหัส PIN ใหม่';
+
+  @override
+  String get confirmNewPin => 'ยืนยันรหัส PIN ใหม่';
+
+  @override
+  String get enterPinToDisable => 'ใส่รหัส PIN เพื่อปิดการใช้งาน';
+
+  @override
+  String get disableAppLock => 'ปิดการล็อกแอป';
+
+  @override
+  String get unassignedAssets => 'สินทรัพย์ที่ยังไม่ได้จัดกลุ่ม';
+
+  @override
+  String get longPressToAssign => 'กดค้างที่สินทรัพย์เพื่อเพิ่มเข้าเป้าหมาย';
+
+  @override
+  String get noUnassignedAssets => 'ไม่มีสินทรัพย์ที่ยังไม่ได้จัดกลุ่ม';
+
+  @override
+  String get editTransaction => 'แก้ไขธุรกรรม';
+
+  @override
+  String get suggestingAi => 'กำลังแนะนำ...';
+
+  @override
+  String get suggestCategoryAi => 'แนะนำหมวดหมู่ด้วย AI';
+
+  @override
+  String get whenDidItHappen => 'เกิดขึ้นเมื่อไหร่?';
+
+  @override
+  String get saveIncome => 'บันทึกรายรับ';
+
+  @override
+  String get saveExpense => 'บันทึกรายจ่าย';
+
+  @override
+  String get selectAssets => 'เลือกสินทรัพย์';
+
+  @override
+  String get chooseAssetsForGoal =>
+      'เลือกสินทรัพย์ที่ยังไม่ได้จัดกลุ่มเพื่อเพิ่มเข้าเป้าหมาย';
+
+  @override
+  String get addOptionalNote => 'เพิ่มหมายเหตุ (ถ้ามี)...';
+
+  @override
+  String get assignAssets => 'จัดกลุ่มสินทรัพย์';
+
+  @override
+  String get addExistingOrNewAsset =>
+      'เพิ่มสินทรัพย์ที่มีอยู่แล้ว หรือสร้างใหม่จากตลาด';
+
+  @override
+  String get selectExistingAssets => 'เลือกสินทรัพย์ที่มีอยู่';
+
+  @override
+  String get browseMarketCreateNew => 'เลือกจากตลาดและสร้างใหม่';
+
+  @override
+  String get createGoal => 'สร้างเป้าหมาย';
+
+  @override
+  String get selectIcon => 'เลือกไอคอน';
+
+  @override
+  String get browseMarketAddNew => 'เลือกจากตลาดและเพิ่มสินทรัพย์ใหม่';
+
+  @override
+  String get chooseOneOrMoreAssets =>
+      'เลือกสินทรัพย์อย่างน้อยหนึ่งรายการเพื่อเพิ่มเข้าเป้าหมาย';
+
+  @override
+  String get thisPortfolioEmpty => 'พอร์ตโฟลิโอนี้ยังไม่มีสินทรัพย์';
+
+  @override
+  String get editAction => 'แก้ไข';
+
+  @override
+  String get removeFromGoal => 'นำออกจากเป้าหมาย';
+
+  @override
+  String get removeFromGoalSubtitle =>
+      'สินทรัพย์จะไม่ถูกลบ — ย้ายไปยังสินทรัพย์ที่ยังไม่ได้จัดกลุ่ม';
+
+  @override
+  String get deletePermanently => 'ลบถาวร';
+
+  @override
+  String get deletePermanentlySubtitle =>
+      'ลบสินทรัพย์นี้และข้อมูลทั้งหมดออกอย่างถาวร';
+
+  @override
+  String get cancel => 'ยกเลิก';
+
+  @override
+  String get addAssetBtn => 'เพิ่มสินทรัพย์';
+
+  @override
+  String get changeQtyBuyPrice => 'เปลี่ยนจำนวนหรือราคาซื้อ';
+
+  @override
+  String get whatIsItFor => 'ใช้เพื่ออะไร?';
+
+  @override
+  String get symbolHint => 'เช่น AAPL';
+
+  @override
+  String get quantityHint => 'เช่น 1.5';
+
+  @override
+  String get saveAsset => 'บันทึกสินทรัพย์';
+
+  @override
+  String get addAssetTitle => 'เพิ่มสินทรัพย์';
+
+  @override
+  String get categoryLabel => 'หมวดหมู่';
+
+  @override
+  String get amountLabel => 'จำนวนเงิน';
+
+  @override
+  String get symbolLabel => 'สัญลักษณ์';
+
+  @override
+  String get dateLabel => 'วันที่';
+
+  @override
+  String get pleaseFillAllFields => 'กรุณากรอกข้อมูลให้ครบถ้วน';
+
+  @override
+  String get noteLunchSalary => 'เช่น มื้อกลางวัน, เงินเดือน...';
 }

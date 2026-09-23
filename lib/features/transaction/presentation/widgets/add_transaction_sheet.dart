@@ -170,7 +170,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(widget.existingTransaction == null ? AppLocalizations.of(context)!.addTransaction : 'Edit Transaction',
+                Text(widget.existingTransaction == null ? AppLocalizations.of(context)!.addTransaction : AppLocalizations.of(context)!.editTransaction,
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor)),
                 IconButton(
                   icon: Icon(Icons.close, color: mutedTextColor),
@@ -216,7 +216,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _onSuggest(),
               style: TextStyle(color: textColor),
-              decoration: _inputDeco('e.g. Lunch, Salary...', primaryColor, fieldBg, mutedTextColor),
+              decoration: _inputDeco(AppLocalizations.of(context)!.noteLunchSalary, primaryColor, fieldBg, mutedTextColor),
             ),
             const SizedBox(height: 10),
 
@@ -246,7 +246,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                         : const Icon(Icons.auto_awesome, size: 18, color: Colors.white),
                     const SizedBox(width: 8),
                     Text(
-                      _loadingSuggestions ? 'Suggesting...' : 'Suggest category with AI',
+                      _loadingSuggestions ? AppLocalizations.of(context)!.suggestingAi : AppLocalizations.of(context)!.suggestCategoryAi,
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
                     ),
                   ],
@@ -300,7 +300,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                   isExpanded: true,
                   value: _selectedCategory,
                   dropdownColor: isDarkMode ? const Color(0xFF1E1B4B) : Colors.white,
-                  hint: Text('Select category',
+                  hint: Text(AppLocalizations.of(context)!.selectCategory,
                     style: TextStyle(color: mutedTextColor, fontSize: 15)),
                   items: AppCategories.forType(isIncome).map((c) {
                     final langCode = Localizations.localeOf(context).languageCode;
@@ -332,7 +332,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             const SizedBox(height: 16),
 
             // Date
-            _Label('When did it happen?', mutedTextColor),
+            _Label(AppLocalizations.of(context)!.whenDidItHappen, mutedTextColor),
             const SizedBox(height: 8),
             GestureDetector(
               onTap: () => _pickDate(primaryColor),
@@ -369,7 +369,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 ),
                 onPressed: _submit,
                 child: Text(
-                  isIncome ? 'Save Income' : 'Save Expense',
+                  isIncome ? AppLocalizations.of(context)!.saveIncome : AppLocalizations.of(context)!.saveExpense,
                   style: const TextStyle(
                     color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold,
                   ),

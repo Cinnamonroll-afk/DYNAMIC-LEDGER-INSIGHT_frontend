@@ -12,6 +12,7 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
       : _portfolioRepository = portfolioRepository,
         super(PortfolioInitial()) {
     on<LoadPortfolios>(_onLoadPortfolios);
+    on<ClearPortfolios>(_onClearPortfolios);
     on<AddPortfolio>(_onAddPortfolio);
     on<UpdatePortfolio>(_onUpdatePortfolio);
     on<DeletePortfolio>(_onDeletePortfolio);
@@ -35,6 +36,12 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
         }
       },
     );
+  }
+
+  void _onClearPortfolios(ClearPortfolios event, Emitter<PortfolioState> emit) async {
+    await _portfolioSubscription?.cancel();
+    _portfolioSubscription = null;
+    emit(PortfolioInitial());
   }
 
   void _onAddPortfolio(AddPortfolio event, Emitter<PortfolioState> emit) async {

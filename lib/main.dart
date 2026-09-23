@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:fincontrol/features/auth/bloc/auth_bloc.dart';
+import 'package:fincontrol/features/auth/bloc/auth_state.dart';
 import 'package:fincontrol/features/transaction/bloc/transaction_bloc.dart';
 import 'package:fincontrol/features/transaction/bloc/transaction_event.dart';
 import 'package:fincontrol/features/transaction/data/repositories/transaction_repository.dart';
@@ -27,7 +28,7 @@ import 'package:fincontrol/features/settings/bloc/language_cubit.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
-  
+
   final authRepository = AuthRepository();
   final isLoggedIn = await authRepository.isLoggedIn();
 
@@ -47,10 +48,35 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => ThemeCubit()),
         BlocProvider(create: (context) => CurrencyCubit()),
         BlocProvider(create: (context) => LanguageCubit()),
-        BlocProvider(create: (context) => AuthBloc(authRepository: authRepository)),
-        BlocProvider(create: (context) => TransactionBloc(transactionRepository: TransactionRepository())..add(LoadTransactions(''))),
-        BlocProvider(create: (context) => PortfolioBloc(portfolioRepository: PortfolioRepository())..add(LoadPortfolios(''))),
-        BlocProvider(create: (context) => AssetBloc(assetRepository: AssetRepository(), marketApiRepository: MarketApiRepository())..add(const LoadAssets())),
+        BlocProvider(
+          create: (context) => AuthBloc(
+            authRepository: authRepository,
+            isLoggedIn: isLoggedIn,
+          ),
+        ),
+        // ✅ แก้: load ข้อมูลเฉพาะเมื่อ isLoggedIn = true เท่านั้น
+        // ถ้าไม่ login อยู่ ให้ listener ใน BlocConsumer จัดการแทน
+        BlocProvider(
+          create: (context) {
+            final bloc = TransactionBloc(transactionRepository: TransactionRepository());
+            if (isLoggedIn) bloc.add(const LoadTransactions(''));
+            return bloc;
+          },
+        ),
+        BlocProvider(
+          create: (context) {
+            final bloc = PortfolioBloc(portfolioRepository: PortfolioRepository());
+            if (isLoggedIn) bloc.add(const LoadPortfolios(''));
+            return bloc;
+          },
+        ),
+        BlocProvider(
+          create: (context) {
+            final bloc = AssetBloc(assetRepository: AssetRepository(), marketApiRepository: MarketApiRepository());
+            if (isLoggedIn) bloc.add(const LoadAssets());
+            return bloc;
+          },
+        ),
       ],
       child: BlocBuilder<ThemeCubit, ThemeMode>(
         builder: (context, themeMode) {
@@ -73,7 +99,29 @@ class MyApp extends StatelessWidget {
                   Locale('th'),
                 ],
                 home: AppLockWrapper(
-                  child: isLoggedIn ? const MainNavigationShell() : const GetStartedView(),
+                  child: BlocConsumer<AuthBloc, AuthState>(
+                    listenWhen: (previous, current) =>
+                        previous.status != current.status,
+                    listener: (context, state) {
+                      if (state.status == AuthStatus.initial) {
+                        // Logged out — wipe all data BLoCs immediately
+                        context.read<TransactionBloc>().add(const ClearTransactions());
+                        context.read<PortfolioBloc>().add(const ClearPortfolios());
+                        context.read<AssetBloc>().add(const ClearAssets());
+                      } else if (state.status == AuthStatus.authenticated) {
+                        // Just logged in / registered — reload fresh data for this user
+                        context.read<TransactionBloc>().add(const LoadTransactions(''));
+                        context.read<PortfolioBloc>().add(const LoadPortfolios(''));
+                        context.read<AssetBloc>().add(const LoadAssets());
+                      }
+                    },
+                    builder: (context, state) {
+                      if (state.status == AuthStatus.authenticated) {
+                        return const MainNavigationShell();
+                      }
+                      return const GetStartedView();
+                    },
+                  ),
                 ),
               );
             },

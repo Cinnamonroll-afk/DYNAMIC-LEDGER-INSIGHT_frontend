@@ -907,6 +907,324 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Net Cash Flow'**
   String get netCashFlow;
+
+  /// No description provided for @protectYourData.
+  ///
+  /// In en, this message translates to:
+  /// **'Protect Your Data'**
+  String get protectYourData;
+
+  /// No description provided for @pinSetupDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up a 6-digit PIN to secure your financial data'**
+  String get pinSetupDescription;
+
+  /// No description provided for @setPinNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Set PIN Now'**
+  String get setPinNow;
+
+  /// No description provided for @skipForNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip for Now'**
+  String get skipForNow;
+
+  /// No description provided for @incorrectPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect PIN'**
+  String get incorrectPin;
+
+  /// No description provided for @pinSavedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN saved successfully'**
+  String get pinSavedSuccessfully;
+
+  /// No description provided for @pinsDoNotMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'PINs do not match'**
+  String get pinsDoNotMatch;
+
+  /// No description provided for @appLockDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'App lock disabled'**
+  String get appLockDisabled;
+
+  /// No description provided for @enterCurrentPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter current PIN'**
+  String get enterCurrentPin;
+
+  /// No description provided for @enterNewPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter new PIN'**
+  String get enterNewPin;
+
+  /// No description provided for @confirmNewPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm new PIN'**
+  String get confirmNewPin;
+
+  /// No description provided for @enterPinToDisable.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter PIN to disable'**
+  String get enterPinToDisable;
+
+  /// No description provided for @disableAppLock.
+  ///
+  /// In en, this message translates to:
+  /// **'Disable App Lock'**
+  String get disableAppLock;
+
+  /// No description provided for @unassignedAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'Unassigned Assets'**
+  String get unassignedAssets;
+
+  /// No description provided for @longPressToAssign.
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press an asset to assign it to a goal'**
+  String get longPressToAssign;
+
+  /// No description provided for @noUnassignedAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'No unassigned assets'**
+  String get noUnassignedAssets;
+
+  /// No description provided for @editTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Transaction'**
+  String get editTransaction;
+
+  /// No description provided for @suggestingAi.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggesting...'**
+  String get suggestingAi;
+
+  /// No description provided for @suggestCategoryAi.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggest category with AI'**
+  String get suggestCategoryAi;
+
+  /// No description provided for @whenDidItHappen.
+  ///
+  /// In en, this message translates to:
+  /// **'When did it happen?'**
+  String get whenDidItHappen;
+
+  /// No description provided for @saveIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Income'**
+  String get saveIncome;
+
+  /// No description provided for @saveExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Expense'**
+  String get saveExpense;
+
+  /// No description provided for @selectAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Assets'**
+  String get selectAssets;
+
+  /// No description provided for @chooseAssetsForGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose unassigned assets to add to this goal'**
+  String get chooseAssetsForGoal;
+
+  /// No description provided for @addOptionalNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an optional note...'**
+  String get addOptionalNote;
+
+  /// No description provided for @assignAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign Assets'**
+  String get assignAssets;
+
+  /// No description provided for @addExistingOrNewAsset.
+  ///
+  /// In en, this message translates to:
+  /// **'Add existing unassigned assets, or create a new one from the market.'**
+  String get addExistingOrNewAsset;
+
+  /// No description provided for @selectExistingAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Existing Assets'**
+  String get selectExistingAssets;
+
+  /// No description provided for @browseMarketCreateNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse Market & Create New'**
+  String get browseMarketCreateNew;
+
+  /// No description provided for @createGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Goal'**
+  String get createGoal;
+
+  /// No description provided for @selectIcon.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Icon'**
+  String get selectIcon;
+
+  /// No description provided for @browseMarketAddNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse market and add a new asset'**
+  String get browseMarketAddNew;
+
+  /// No description provided for @chooseOneOrMoreAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose one or more assets to add to this goal'**
+  String get chooseOneOrMoreAssets;
+
+  /// No description provided for @thisPortfolioEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'This portfolio is currently empty'**
+  String get thisPortfolioEmpty;
+
+  /// No description provided for @editAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get editAction;
+
+  /// No description provided for @removeFromGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from this goal'**
+  String get removeFromGoal;
+
+  /// No description provided for @removeFromGoalSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Asset is NOT deleted — moves to Unassigned Assets'**
+  String get removeFromGoalSubtitle;
+
+  /// No description provided for @deletePermanently.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete permanently'**
+  String get deletePermanently;
+
+  /// No description provided for @deletePermanentlySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Removes this asset and all its data forever'**
+  String get deletePermanentlySubtitle;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @addAssetBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Asset'**
+  String get addAssetBtn;
+
+  /// No description provided for @changeQtyBuyPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Change quantity or buy price'**
+  String get changeQtyBuyPrice;
+
+  /// No description provided for @whatIsItFor.
+  ///
+  /// In en, this message translates to:
+  /// **'What is this for?'**
+  String get whatIsItFor;
+
+  /// No description provided for @symbolHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. AAPL'**
+  String get symbolHint;
+
+  /// No description provided for @quantityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 1.5'**
+  String get quantityHint;
+
+  /// No description provided for @saveAsset.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Asset'**
+  String get saveAsset;
+
+  /// No description provided for @addAssetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Asset'**
+  String get addAssetTitle;
+
+  /// No description provided for @categoryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get categoryLabel;
+
+  /// No description provided for @amountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get amountLabel;
+
+  /// No description provided for @symbolLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Symbol'**
+  String get symbolLabel;
+
+  /// No description provided for @dateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get dateLabel;
+
+  /// No description provided for @pleaseFillAllFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Please fill all fields correctly'**
+  String get pleaseFillAllFields;
+
+  /// No description provided for @noteLunchSalary.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Lunch, Salary...'**
+  String get noteLunchSalary;
 }
 
 class _AppLocalizationsDelegate

@@ -19,6 +19,7 @@ class AssetBloc extends Bloc<AssetEvent, AssetState> {
         _marketApiRepository = marketApiRepository,
         super(AssetInitial()) {
     on<LoadAssets>(_onLoadAssets);
+    on<ClearAssets>(_onClearAssets);
     on<AddAsset>(_onAddAsset);
     on<UpdateAsset>(_onUpdateAsset);
     on<DeleteAsset>(_onDeleteAsset);
@@ -53,6 +54,14 @@ class AssetBloc extends Bloc<AssetEvent, AssetState> {
     if (!isClosed) {
       add(SyncAssetPrices(event.portfolioId));
     }
+  }
+
+  void _onClearAssets(ClearAssets event, Emitter<AssetState> emit) async {
+    _syncTimer?.cancel();
+    _syncTimer = null;
+    await _assetSubscription?.cancel();
+    _assetSubscription = null;
+    emit(AssetInitial());
   }
 
   void _onAddAsset(AddAsset event, Emitter<AssetState> emit) async {

@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:fincontrol/features/auth/bloc/auth_bloc.dart';
 import 'package:fincontrol/features/auth/bloc/auth_event.dart';
 import 'package:fincontrol/features/auth/bloc/auth_state.dart';
-import 'package:fincontrol/features/navigation/presentation/widgets/bottom_navigation_bar.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -101,7 +100,7 @@ class _LoginPageState extends State<LoginPage> {
             hintText: hint,
             hintStyle: GoogleFonts.inter(color: Colors.grey.shade400, fontWeight: FontWeight.w500),
             filled: true,
-            fillColor: Colors.grey.shade100, // Unified input fill
+            fillColor: Colors.grey.shade100,
             prefixIcon: Icon(icon, color: Colors.grey.shade600),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
@@ -117,17 +116,17 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FE), // Unified background
+      backgroundColor: const Color(0xFFF8F9FE),
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state.status == AuthStatus.error) {
             _showErrorSnackBar(context, state.errorMessage ?? 'Authentication Error');
           } else if (state.status == AuthStatus.authenticated) {
-            // Navigate to MainNavigationShell and clear the back stack
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const MainNavigationShell()),
-              (route) => false,
-            );
+            // ✅ แค่ pop กลับ — root BlocConsumer ใน main.dart จะ switch หน้าเอง
+            // และจะ dispatch LoadTransactions/LoadPortfolios/LoadAssets ให้อัตโนมัติ
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
           }
         },
         builder: (context, state) {
@@ -174,7 +173,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       const SizedBox(height: 32),
-                      
+
                       if (_isSignUp) ...[
                         _buildLabeledField(
                           label: 'User Name',
@@ -184,7 +183,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 20),
                       ],
-                      
+
                       _buildLabeledField(
                         label: 'Email Address',
                         hint: 'john.doe@example.com',
@@ -193,7 +192,7 @@ class _LoginPageState extends State<LoginPage> {
                         keyboardType: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: 20),
-                      
+
                       _buildLabeledField(
                         label: 'Password',
                         hint: '••••••••',
@@ -201,7 +200,7 @@ class _LoginPageState extends State<LoginPage> {
                         controller: _passwordController,
                         isPassword: true,
                       ),
-                      
+
                       if (!_isSignUp) ...[
                         const SizedBox(height: 8),
                         Align(
@@ -231,7 +230,7 @@ class _LoginPageState extends State<LoginPage> {
                       ] else ...[
                         const SizedBox(height: 20),
                       ],
-                      
+
                       SizedBox(
                         width: double.infinity,
                         height: 56,
@@ -242,7 +241,7 @@ class _LoginPageState extends State<LoginPage> {
                                   final email = _emailController.text.trim();
                                   final password = _passwordController.text.trim();
                                   final userName = _userNameController.text.trim();
-                                  
+
                                   if (_isSignUp && userName.isEmpty) {
                                     _showErrorSnackBar(context, 'Please enter a user name');
                                     return;
@@ -270,7 +269,7 @@ class _LoginPageState extends State<LoginPage> {
                                   }
                                 },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF4F3FF0), // Primary
+                            backgroundColor: const Color(0xFF4F3FF0),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
@@ -295,7 +294,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                         ),
                       ),
-                      
+
                       if (!_isSignUp) ...[
                         const SizedBox(height: 32),
                         Text(
@@ -317,14 +316,13 @@ class _LoginPageState extends State<LoginPage> {
                           ],
                         ),
                       ],
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       GestureDetector(
                         onTap: () {
                           setState(() {
                             _isSignUp = !_isSignUp;
-                            // Clear controllers when switching modes
                             _passwordController.clear();
                           });
                         },

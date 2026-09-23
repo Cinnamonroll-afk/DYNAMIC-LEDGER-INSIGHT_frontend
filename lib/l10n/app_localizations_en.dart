@@ -420,4 +420,169 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get netCashFlow => 'Net Cash Flow';
+
+  @override
+  String get protectYourData => 'Protect Your Data';
+
+  @override
+  String get pinSetupDescription =>
+      'Set up a 6-digit PIN to secure your financial data';
+
+  @override
+  String get setPinNow => 'Set PIN Now';
+
+  @override
+  String get skipForNow => 'Skip for Now';
+
+  @override
+  String get incorrectPin => 'Incorrect PIN';
+
+  @override
+  String get pinSavedSuccessfully => 'PIN saved successfully';
+
+  @override
+  String get pinsDoNotMatch => 'PINs do not match';
+
+  @override
+  String get appLockDisabled => 'App lock disabled';
+
+  @override
+  String get enterCurrentPin => 'Enter current PIN';
+
+  @override
+  String get enterNewPin => 'Enter new PIN';
+
+  @override
+  String get confirmNewPin => 'Confirm new PIN';
+
+  @override
+  String get enterPinToDisable => 'Enter PIN to disable';
+
+  @override
+  String get disableAppLock => 'Disable App Lock';
+
+  @override
+  String get unassignedAssets => 'Unassigned Assets';
+
+  @override
+  String get longPressToAssign => 'Long-press an asset to assign it to a goal';
+
+  @override
+  String get noUnassignedAssets => 'No unassigned assets';
+
+  @override
+  String get editTransaction => 'Edit Transaction';
+
+  @override
+  String get suggestingAi => 'Suggesting...';
+
+  @override
+  String get suggestCategoryAi => 'Suggest category with AI';
+
+  @override
+  String get whenDidItHappen => 'When did it happen?';
+
+  @override
+  String get saveIncome => 'Save Income';
+
+  @override
+  String get saveExpense => 'Save Expense';
+
+  @override
+  String get selectAssets => 'Select Assets';
+
+  @override
+  String get chooseAssetsForGoal =>
+      'Choose unassigned assets to add to this goal';
+
+  @override
+  String get addOptionalNote => 'Add an optional note...';
+
+  @override
+  String get assignAssets => 'Assign Assets';
+
+  @override
+  String get addExistingOrNewAsset =>
+      'Add existing unassigned assets, or create a new one from the market.';
+
+  @override
+  String get selectExistingAssets => 'Select Existing Assets';
+
+  @override
+  String get browseMarketCreateNew => 'Browse Market & Create New';
+
+  @override
+  String get createGoal => 'Create Goal';
+
+  @override
+  String get selectIcon => 'Select Icon';
+
+  @override
+  String get browseMarketAddNew => 'Browse market and add a new asset';
+
+  @override
+  String get chooseOneOrMoreAssets =>
+      'Choose one or more assets to add to this goal';
+
+  @override
+  String get thisPortfolioEmpty => 'This portfolio is currently empty';
+
+  @override
+  String get editAction => 'Edit';
+
+  @override
+  String get removeFromGoal => 'Remove from this goal';
+
+  @override
+  String get removeFromGoalSubtitle =>
+      'Asset is NOT deleted — moves to Unassigned Assets';
+
+  @override
+  String get deletePermanently => 'Delete permanently';
+
+  @override
+  String get deletePermanentlySubtitle =>
+      'Removes this asset and all its data forever';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get addAssetBtn => 'Add Asset';
+
+  @override
+  String get changeQtyBuyPrice => 'Change quantity or buy price';
+
+  @override
+  String get whatIsItFor => 'What is this for?';
+
+  @override
+  String get symbolHint => 'e.g. AAPL';
+
+  @override
+  String get quantityHint => 'e.g. 1.5';
+
+  @override
+  String get saveAsset => 'Save Asset';
+
+  @override
+  String get addAssetTitle => 'Add Asset';
+
+  @override
+  String get categoryLabel => 'Category';
+
+  @override
+  String get amountLabel => 'Amount';
+
+  @override
+  String get symbolLabel => 'Symbol';
+
+  @override
+  String get dateLabel => 'Date';
+
+  @override
+  String get pleaseFillAllFields => 'Please fill all fields correctly';
+
+  @override
+  String get noteLunchSalary => 'e.g. Lunch, Salary...';
 }

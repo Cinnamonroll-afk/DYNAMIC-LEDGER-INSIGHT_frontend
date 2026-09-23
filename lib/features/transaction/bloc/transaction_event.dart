@@ -3,7 +3,7 @@ import 'package:fincontrol/features/transaction/data/models/transaction_model.da
 
 abstract class TransactionEvent extends Equatable {
   const TransactionEvent();
-  
+
   @override
   List<Object> get props => [];
 }
@@ -11,15 +11,19 @@ abstract class TransactionEvent extends Equatable {
 class LoadTransactions extends TransactionEvent {
   final String userId;
   const LoadTransactions(this.userId);
-  
+
   @override
   List<Object> get props => [userId];
+}
+
+class ClearTransactions extends TransactionEvent {
+  const ClearTransactions();
 }
 
 class AddTransaction extends TransactionEvent {
   final TransactionModel transaction;
   const AddTransaction(this.transaction);
-  
+
   @override
   List<Object> get props => [transaction];
 }
@@ -27,7 +31,7 @@ class AddTransaction extends TransactionEvent {
 class UpdateTransaction extends TransactionEvent {
   final TransactionModel transaction;
   const UpdateTransaction(this.transaction);
-  
+
   @override
   List<Object> get props => [transaction];
 }
@@ -35,7 +39,7 @@ class UpdateTransaction extends TransactionEvent {
 class DeleteTransaction extends TransactionEvent {
   final String id;
   const DeleteTransaction(this.id);
-  
+
   @override
   List<Object> get props => [id];
 }

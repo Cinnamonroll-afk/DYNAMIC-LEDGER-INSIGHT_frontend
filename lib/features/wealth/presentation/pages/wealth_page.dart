@@ -472,7 +472,7 @@ Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Unassigned Assets',
+          AppLocalizations.of(context)!.unassignedAssets,
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w800,
@@ -481,7 +481,7 @@ Row(
         ),
         const SizedBox(height: 8),
         Text(
-          'Long-press an asset to assign it to a goal',
+          AppLocalizations.of(context)!.longPressToAssign,
           style: TextStyle(fontSize: 13, color: mutedTextColor),
         ),
         const SizedBox(height: 16),
@@ -496,7 +496,7 @@ Row(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 40),
                     child: Text(
-                      'No unassigned assets',
+                      AppLocalizations.of(context)!.noUnassignedAssets,
                       style: TextStyle(color: mutedTextColor, fontSize: 16),
                     ),
                   ),

@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:fincontrol/features/wealth/data/models/asset_model.dart';
 
 class AssetRepository {
-  final String baseUrl = 'http://192.168.88.84:8000';
+  String get baseUrl => dotenv.env['BASE_URL'] ?? 'http://192.168.88.84:8000';
 
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();

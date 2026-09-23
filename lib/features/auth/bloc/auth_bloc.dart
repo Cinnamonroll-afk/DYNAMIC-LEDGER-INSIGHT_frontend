@@ -6,9 +6,12 @@ import 'package:fincontrol/features/auth/bloc/auth_state.dart';
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _authRepository;
 
-  AuthBloc({required this._authRepository}) 
-      : super(const AuthState()) {
-    
+  AuthBloc({required AuthRepository authRepository, bool isLoggedIn = false})
+      : _authRepository = authRepository,
+        super(isLoggedIn
+            ? const AuthState(status: AuthStatus.authenticated)
+            : const AuthState()) {
+
     on<AuthLoginRequested>((event, emit) async {
       emit(const AuthState(status: AuthStatus.loading));
       try {

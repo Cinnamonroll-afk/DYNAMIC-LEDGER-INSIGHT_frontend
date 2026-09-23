@@ -1,4 +1,7 @@
 import 'package:fincontrol/l10n/app_localizations.dart';
+import 'package:fincontrol/features/settings/bloc/currency_cubit.dart';
+import 'package:fincontrol/core/utils/currency_formatter.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fincontrol/features/wealth/presentation/pages/asset_detail_page.dart';
 import 'package:flutter/material.dart';
 import 'package:fincontrol/features/wealth/data/models/asset_model.dart';
@@ -298,9 +301,17 @@ class _InvestPageState extends State<InvestPage> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text(
-                                  '\$${(asset['price'] as double).toStringAsFixed(2)}',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: textColor),
+                                BlocBuilder<CurrencyCubit, CurrencyState>(
+                                  builder: (context, currencyState) {
+                                    final price = asset['price'] as double;
+                                    // Thai stocks (.BK) are already in THB, everything else is USD
+                                    final ticker = asset['ticker'] as String;
+                                    final fromCurrency = ticker.endsWith('.BK') ? 'THB' : 'USD';
+                                    return Text(
+                                      CurrencyFormatter.format(price, currencyState, fromCurrency: fromCurrency),
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: textColor),
+                                    );
+                                  },
                                 ),
                                 const SizedBox(height: 4),
                                 Text(

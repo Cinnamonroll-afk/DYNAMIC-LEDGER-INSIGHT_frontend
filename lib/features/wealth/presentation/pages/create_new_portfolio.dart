@@ -162,11 +162,11 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Select Assets',
+                  AppLocalizations.of(context)!.selectAssets,
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
                 ),
                 Text(
-                  'Choose unassigned assets to add to this goal',
+                  AppLocalizations.of(context)!.chooseAssetsForGoal,
                   style: TextStyle(fontSize: 13, color: textColor?.withValues(alpha: 0.5)),
                 ),
                 const SizedBox(height: 16),
@@ -454,7 +454,7 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
                     style: TextStyle(color: textColor, fontSize: 15),
                     maxLines: null,
                     decoration: InputDecoration(
-                      hintText: 'Add an optional note...',
+                      hintText: AppLocalizations.of(context)!.addOptionalNote,
                       hintStyle: TextStyle(
                         color: mutedTextColor?.withValues(alpha: 0.5),
                         fontSize: 15,
@@ -466,12 +466,12 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
                 ),
                 const SizedBox(height: 40),
                 Text(
-                  'Assign Assets',
+                  AppLocalizations.of(context)!.assignAssets,
                   style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Add existing unassigned assets, or create a new one from the market.',
+                  AppLocalizations.of(context)!.addExistingOrNewAsset,
                   style: TextStyle(color: mutedTextColor, fontSize: 13, height: 1.5),
                 ),
                 const SizedBox(height: 16),
@@ -486,7 +486,7 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
                       children: [
                         Text(
                           _selectedAssets.isEmpty
-                              ? 'Select Existing Assets'
+                              ? AppLocalizations.of(context)!.selectExistingAssets
                               : '${_selectedAssets.length} asset(s) selected',
                           style: TextStyle(
                             color: primaryColor,
@@ -514,7 +514,7 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Browse Market & Create New',
+                          AppLocalizations.of(context)!.browseMarketCreateNew,
                           style: TextStyle(
                             color: mutedTextColor,
                             fontWeight: FontWeight.w600,
@@ -564,7 +564,7 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                         )
                       : Text(
-                          widget.existingPortfolio != null ? 'Update Goal' : 'Create Goal',
+                          widget.existingPortfolio != null ? AppLocalizations.of(context)!.updateGoal : AppLocalizations.of(context)!.createGoal,
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                 ),
@@ -635,7 +635,7 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
               ),
               const SizedBox(height: 24),
               Text(
-                'Select Icon',
+                AppLocalizations.of(context)!.selectIcon,
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
               ),
               const SizedBox(height: 32),

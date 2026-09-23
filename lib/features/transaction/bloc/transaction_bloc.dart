@@ -12,6 +12,7 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
       : _transactionRepository = transactionRepository,
         super(TransactionInitial()) {
     on<LoadTransactions>(_onLoadTransactions);
+    on<ClearTransactions>(_onClearTransactions);
     on<AddTransaction>(_onAddTransaction);
     on<UpdateTransaction>(_onUpdateTransaction);
     on<DeleteTransaction>(_onDeleteTransaction);
@@ -34,6 +35,12 @@ class TransactionBloc extends Bloc<TransactionEvent, TransactionState> {
         }
       },
     );
+  }
+
+  void _onClearTransactions(ClearTransactions event, Emitter<TransactionState> emit) async {
+    await _transactionSubscription?.cancel();
+    _transactionSubscription = null;
+    emit(TransactionInitial());
   }
 
   void _onAddTransaction(AddTransaction event, Emitter<TransactionState> emit) async {

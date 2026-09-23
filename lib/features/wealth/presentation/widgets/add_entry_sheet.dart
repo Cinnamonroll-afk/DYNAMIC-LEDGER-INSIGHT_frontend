@@ -87,7 +87,7 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
 
     if (name.isEmpty || quantity <= 0 || buyPrice <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields correctly')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.pleaseFillAllFields)),
       );
       return;
     }
@@ -153,7 +153,7 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
             const SizedBox(height: 24),
             
             Text(
-              'Add Asset',
+              AppLocalizations.of(context)!.addAssetTitle,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
@@ -162,7 +162,7 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
             ),
             const SizedBox(height: 24),
             
-            _buildLabel('Category', textColor),
+            _buildLabel(AppLocalizations.of(context)!.categoryLabel, textColor),
             DropdownButtonFormField<String>(
               initialValue: _selectedCategory,
               icon: Icon(Icons.keyboard_arrow_down, color: textColor),
@@ -200,7 +200,7 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
               controller: _noteController,
               style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
               decoration: InputDecoration(
-                hintText: 'What is this for?',
+                hintText: AppLocalizations.of(context)!.whatIsItFor,
                 hintStyle: TextStyle(color: mutedTextColor),
                 prefixIcon: Icon(Icons.notes, color: mutedTextColor),
                 border: OutlineInputBorder(
@@ -214,7 +214,7 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
             ),
             const SizedBox(height: 16),
             
-            _buildLabel('Amount', textColor),
+            _buildLabel(AppLocalizations.of(context)!.amountLabel, textColor),
             TextField(
               controller: _amountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -249,12 +249,12 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildLabel('Symbol', textColor),
+                      _buildLabel(AppLocalizations.of(context)!.symbolLabel, textColor),
                       TextField(
                         controller: _symbolController,
                         style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
                         decoration: InputDecoration(
-                          hintText: 'AAPL',
+                          hintText: AppLocalizations.of(context)!.symbolHint,
                           hintStyle: TextStyle(color: mutedTextColor),
                           prefixIcon: Icon(Icons.tag, color: mutedTextColor),
                           border: OutlineInputBorder(
@@ -280,7 +280,7 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
                         decoration: InputDecoration(
-                          hintText: '1.5',
+                          hintText: AppLocalizations.of(context)!.quantityHint,
                           hintStyle: TextStyle(color: mutedTextColor),
                           prefixIcon: Icon(Icons.numbers, color: mutedTextColor),
                           border: OutlineInputBorder(
@@ -299,7 +299,7 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
             ),
             const SizedBox(height: 16),
             
-            _buildLabel('Date', textColor),
+            _buildLabel(AppLocalizations.of(context)!.dateLabel, textColor),
             InkWell(
               onTap: () => _pickDate(primaryColor),
               borderRadius: BorderRadius.circular(16),
@@ -341,8 +341,8 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'Save Asset',
+                child: Text(
+                  AppLocalizations.of(context)!.saveAsset,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

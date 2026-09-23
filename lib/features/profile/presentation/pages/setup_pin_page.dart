@@ -1,36 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fincontrol/l10n/app_localizations.dart';
 
-enum PinSetupState { enterCurrent, enterNew, confirmNew }
+enum PinSetupState { enterCurrent, enterNew, confirmNew, disable }
 
 class SetupPinPage extends StatefulWidget {
-  const SetupPinPage({super.key});
+  final String? userId;
+
+  const SetupPinPage({super.key, this.userId});
 
   @override
   State<SetupPinPage> createState() => _SetupPinPageState();
 }
 
 class _SetupPinPageState extends State<SetupPinPage> {
+  String _userId = '';
   String _currentPin = '';
   String _enteredPin = '';
   String _newPin = '';
-  
+
   PinSetupState _state = PinSetupState.enterNew;
   String _errorMessage = '';
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _checkExistingPin();
+    _init();
   }
 
-  Future<void> _checkExistingPin() async {
+  Future<void> _init() async {
     final prefs = await SharedPreferences.getInstance();
-    final existingPin = prefs.getString('app_lock_pin');
-    if (existingPin != null && existingPin.isNotEmpty) {
+    _userId = widget.userId ?? prefs.getString('user_id') ?? '';
+    final existingPin = prefs.getString('app_lock_pin_$_userId');
+    if (mounted) {
       setState(() {
-        _currentPin = existingPin;
-        _state = PinSetupState.enterCurrent;
+        if (existingPin != null && existingPin.isNotEmpty) {
+          _currentPin = existingPin;
+          _state = PinSetupState.enterCurrent;
+        }
+        _isLoading = false;
       });
     }
   }
@@ -57,7 +66,6 @@ class _SetupPinPageState extends State<SetupPinPage> {
   }
 
   void _processCompletedPin() async {
-    // Delay slightly to let the user see the 6th dot fill up
     await Future.delayed(const Duration(milliseconds: 200));
     if (!mounted) return;
 
@@ -71,10 +79,11 @@ class _SetupPinPageState extends State<SetupPinPage> {
         } else {
           setState(() {
             _enteredPin = '';
-            _errorMessage = 'Incorrect PIN. Try again.';
+            _errorMessage = AppLocalizations.of(context)!.incorrectPin;
           });
         }
         break;
+
       case PinSetupState.enterNew:
         setState(() {
           _newPin = _enteredPin;
@@ -82,44 +91,76 @@ class _SetupPinPageState extends State<SetupPinPage> {
           _state = PinSetupState.confirmNew;
         });
         break;
+
       case PinSetupState.confirmNew:
         if (_enteredPin == _newPin) {
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('app_lock_pin', _newPin);
+          await prefs.setString('app_lock_pin_$_userId', _newPin);
+          // Mark prompt as seen so it doesn't show again
+          await prefs.setBool('pin_prompt_dismissed_$_userId', true);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('App Lock PIN saved successfully')),
+              SnackBar(content: Text(AppLocalizations.of(context)!.pinSavedSuccessfully)),
             );
             Navigator.pop(context);
           }
         } else {
           setState(() {
             _enteredPin = '';
-            _errorMessage = 'PINs do not match. Try again.';
+            _errorMessage = AppLocalizations.of(context)!.pinsDoNotMatch;
+          });
+        }
+        break;
+
+      case PinSetupState.disable:
+        if (_enteredPin == _currentPin) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('app_lock_pin_$_userId');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(AppLocalizations.of(context)!.appLockDisabled)),
+            );
+            Navigator.pop(context);
+          }
+        } else {
+          setState(() {
+            _enteredPin = '';
+            _errorMessage = AppLocalizations.of(context)!.incorrectPin;
           });
         }
         break;
     }
   }
 
-  String _getTitle() {
+  String _getTitle(AppLocalizations l10n) {
     switch (_state) {
       case PinSetupState.enterCurrent:
-        return 'Enter Current PIN';
+        return l10n.enterCurrentPin;
       case PinSetupState.enterNew:
-        return 'Enter New PIN';
+        return l10n.enterNewPin;
       case PinSetupState.confirmNew:
-        return 'Confirm New PIN';
+        return l10n.confirmNewPin;
+      case PinSetupState.disable:
+        return l10n.enterPinToDisable;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final textColor = Theme.of(context).textTheme.bodyLarge?.color ?? Colors.white;
+    final l10n = AppLocalizations.of(context)!;
+    final textColor =
+        Theme.of(context).textTheme.bodyLarge?.color ?? Colors.white;
+
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('App Lock PIN'),
+        title: Text(l10n.appLockPin),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -128,7 +169,7 @@ class _SetupPinPageState extends State<SetupPinPage> {
           children: [
             const Spacer(),
             Text(
-              _getTitle(),
+              _getTitle(l10n),
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -139,14 +180,36 @@ class _SetupPinPageState extends State<SetupPinPage> {
             if (_errorMessage.isNotEmpty)
               Text(
                 _errorMessage,
-                style: const TextStyle(color: Colors.redAccent, fontSize: 16),
+                style:
+                    const TextStyle(color: Colors.redAccent, fontSize: 16),
               )
             else
-              const SizedBox(height: 19), // placeholder for error text height
+              const SizedBox(height: 19),
             const SizedBox(height: 32),
             _buildPinIndicators(textColor),
             const Spacer(),
             _buildNumberPad(textColor),
+            // ปุ่ม "ปิด App Lock" — แสดงเมื่อมี PIN อยู่แล้ว และไม่ได้อยู่ใน disable mode
+            if (_currentPin.isNotEmpty && _state != PinSetupState.disable) ...[
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _state = PinSetupState.disable;
+                    _enteredPin = '';
+                    _errorMessage = '';
+                  });
+                },
+                child: Text(
+                  l10n.disableAppLock,
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 32),
           ],
         ),
@@ -165,7 +228,9 @@ class _SetupPinPageState extends State<SetupPinPage> {
           height: 16,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isFilled ? textColor : textColor.withValues(alpha: 0.2),
+            color: isFilled
+                ? textColor
+                : textColor.withValues(alpha: 0.2),
           ),
         );
       }),
@@ -207,7 +272,7 @@ class _SetupPinPageState extends State<SetupPinPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              const SizedBox(width: 80, height: 80), // Empty space
+              const SizedBox(width: 80, height: 80),
               _buildNumberButton('0', textColor),
               _buildDeleteButton(textColor),
             ],
