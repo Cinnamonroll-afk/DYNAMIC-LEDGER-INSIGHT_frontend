@@ -128,6 +128,348 @@ class AppLocalizationsTh extends AppLocalizations {
   String get insightEmpty => 'ข้อมูลยังไม่เพียงพอสำหรับข้อมูลเชิงลึก';
 
   @override
+  String get insightPeriodDay => 'วัน';
+
+  @override
+  String get insightPeriodWeek => 'สัปดาห์';
+
+  @override
+  String get insightPeriodMonth => 'เดือน';
+
+  @override
+  String get insightEmptyDay =>
+      'วันนี้ยังไม่มีรายการ เพิ่มรายการเพื่อรับคำแนะนำ';
+
+  @override
+  String get insightEmptyWeek =>
+      'สัปดาห์นี้ยังไม่มีรายการ เพิ่มรายการเพื่อรับคำแนะนำ';
+
+  @override
+  String get insightEmptyMonth =>
+      'เดือนนี้ยังไม่มีรายการ เพิ่มรายการเพื่อรับคำแนะนำ';
+
+  @override
+  String get insightIncomeLabel => 'รายรับ';
+
+  @override
+  String get insightExpenseLabel => 'รายจ่าย';
+
+  @override
+  String get insightVsYesterday => 'จากเมื่อวาน';
+
+  @override
+  String get insightVsLastWeek => 'จากสัปดาห์ก่อน';
+
+  @override
+  String get insightVsLastMonth => 'จากเดือนก่อน';
+
+  @override
+  String get insightRetry => 'ลองใหม่';
+
+  @override
+  String get insightRefresh => 'ขอคำแนะนำใหม่';
+
+  @override
+  String get aiSuggestionsLabel => 'หมวดที่ AI แนะนำ';
+
+  @override
+  String get aiCategoryDisclaimer =>
+      'AI อาจแนะนำผิดพลาดได้ โปรดตรวจสอบก่อนบันทึก';
+
+  @override
+  String get aiInsightDisclaimer => 'คำแนะนำจาก AI อาจไม่ถูกต้องเสมอไป';
+
+  @override
+  String get targetAmountRequired => 'กรุณาใส่จำนวนเงินเป้าหมายที่มากกว่า 0';
+
+  @override
+  String get noTargetSet => 'ยังไม่ได้ตั้งเป้าหมาย — แก้ไขเป้าหมายเพื่อเพิ่ม';
+
+  @override
+  String get recordBuyTitle => 'บันทึกการซื้อ';
+
+  @override
+  String get editHoldingTitle => 'แก้ไขการถือครอง';
+
+  @override
+  String get pricePerUnit => 'ราคาต่อหน่วย';
+
+  @override
+  String get avgPricePerUnit => 'ราคาเฉลี่ยต่อหน่วย';
+
+  @override
+  String get marketPriceLabel => 'ราคาตลาด';
+
+  @override
+  String get totalInvested => 'ยอดลงทุนรวม';
+
+  @override
+  String get totalEditHint => 'พิมพ์ยอดรวมแทนได้ แอปจะคำนวณจำนวนให้';
+
+  @override
+  String get useMarketPrice => 'ใช้ราคาตลาด';
+
+  @override
+  String get assetNameLabel => 'ชื่อสินทรัพย์';
+
+  @override
+  String get unitsSuffix => 'หน่วย';
+
+  @override
+  String get addNav => 'เพิ่ม';
+
+  @override
+  String get expenseSubtitle => 'บันทึกค่าใช้จ่าย';
+
+  @override
+  String get incomeSubtitle => 'บันทึกเงินเข้า';
+
+  @override
+  String get investSubtitle => 'ซื้อหุ้นหรือคริปโตจากตลาด';
+
+  @override
+  String get newGoalSubtitle => 'ตั้งเป้าหมายการออมหรือการลงทุน';
+
+  @override
+  String get addAssetManually => 'เพิ่มสินทรัพย์เอง (ไม่มีในตลาด)';
+
+  @override
+  String get trendTitle => 'รายรับ-รายจ่ายตามช่วงเวลา';
+
+  @override
+  String get summaryTab => 'สรุป';
+
+  @override
+  String get todayLabel => 'วันนี้';
+
+  @override
+  String get yesterdayLabel => 'เมื่อวาน';
+
+  @override
+  String get netLabel => 'คงเหลือ';
+
+  @override
+  String get noTransactionsInPeriod => 'ไม่มีรายการในช่วงนี้';
+
+  @override
+  String get vsPreviousPeriod => 'เทียบกับช่วงก่อนหน้า';
+
+  @override
+  String get transactionDeleted => 'ลบรายการแล้ว';
+
+  @override
+  String get previousPeriodTooltip => 'ช่วงก่อนหน้า';
+
+  @override
+  String get nextPeriodTooltip => 'ช่วงถัดไป';
+
+  @override
+  String get editTransactionSubtitle => 'แก้จำนวนเงิน หมวด หรือวันที่';
+
+  @override
+  String get deleteTransactionSubtitle => 'ลบรายการนี้ถาวร';
+
+  @override
+  String thisMonthLabel(String month) {
+    return 'เดือนนี้ ($month)';
+  }
+
+  @override
+  String spentOfIncome(String percent) {
+    return 'ใช้ไป $percent% ของรายรับ';
+  }
+
+  @override
+  String get netThisMonth => 'คงเหลือเดือนนี้';
+
+  @override
+  String get last7Days => '7 วัน';
+
+  @override
+  String get spendingThisMonth => 'ใช้จ่ายเดือนนี้';
+
+  @override
+  String get noSpendingThisMonth => 'เดือนนี้ยังไม่มีรายจ่าย';
+
+  @override
+  String get othersLabel => 'อื่นๆ';
+
+  @override
+  String get investmentPortfolio => 'พอร์ตลงทุน';
+
+  @override
+  String get startInvestingHint => 'ติดตามหุ้นและคริปโตเพื่อไปถึงเป้าหมาย';
+
+  @override
+  String get totalPortfolioValue => 'มูลค่าพอร์ตทั้งหมด';
+
+  @override
+  String get totalGainLabel => 'กำไรทั้งหมด';
+
+  @override
+  String get totalLossLabel => 'ขาดทุนทั้งหมด';
+
+  @override
+  String get costBasisLabel => 'ต้นทุน';
+
+  @override
+  String get investAction => 'ลงทุน';
+
+  @override
+  String get assetTypeStock => 'หุ้น';
+
+  @override
+  String get assetTypeCrypto => 'คริปโต';
+
+  @override
+  String get assetTypeEtf => 'ETF';
+
+  @override
+  String get assetTypeFund => 'กองทุน';
+
+  @override
+  String get assetTypeOther => 'อื่นๆ';
+
+  @override
+  String completedGoalsCount(String count) {
+    return 'เป้าหมายที่สำเร็จแล้ว ($count)';
+  }
+
+  @override
+  String get completedBadge => 'สำเร็จแล้ว';
+
+  @override
+  String get restoreGoal => 'ย้ายกลับไปเป้าหมายที่ใช้งาน';
+
+  @override
+  String get archiveGoal => 'ย้ายไปเป้าหมายที่สำเร็จแล้ว';
+
+  @override
+  String get deleteGoal => 'ลบเป้าหมาย';
+
+  @override
+  String get deleteGoalConfirm =>
+      'ลบเป้าหมายนี้หรือไม่? สินทรัพย์ในเป้าหมายจะไม่ถูกลบ แต่ย้ายไปที่ยังไม่ได้จัดกลุ่ม';
+
+  @override
+  String get goalAchievedTitle => 'บรรลุเป้าหมายแล้ว!';
+
+  @override
+  String get goalAchievedBody =>
+      'คุณทำได้ครบ 100% ของเป้าหมายนี้แล้ว ต้องการทำอะไรต่อ?';
+
+  @override
+  String get keepActive => 'ใช้งานต่อ';
+
+  @override
+  String get tapAssetForActions =>
+      'แตะสินทรัพย์เพื่อซื้อเพิ่ม ขาย หรือย้ายเข้าเป้าหมาย';
+
+  @override
+  String get wealthEmptyTitle => 'เริ่มสร้างความมั่งคั่งของคุณ';
+
+  @override
+  String get wealthEmptyBody =>
+      'เพิ่มการลงทุนแรกของคุณ แล้วจัดกลุ่มเป็นเป้าหมาย เช่น ซื้อบ้าน หรือเกษียณ';
+
+  @override
+  String get startInvesting => 'เริ่มลงทุน';
+
+  @override
+  String goalsCount(String count) {
+    return 'เป้าหมาย ($count)';
+  }
+
+  @override
+  String get buyMoreAction => 'ซื้อเพิ่ม';
+
+  @override
+  String get buyMoreSubtitle => 'เพิ่มจำนวนที่ราคาใหม่ ระบบคำนวณราคาเฉลี่ยให้';
+
+  @override
+  String get sellAction => 'ขาย';
+
+  @override
+  String get sellSubtitle => 'ลดจำนวนหน่วยที่ถืออยู่';
+
+  @override
+  String get assignToGoalAction => 'ย้ายเข้าเป้าหมาย';
+
+  @override
+  String get assignToGoalSubtitle => 'นำสินทรัพย์นี้เข้าเป้าหมายของคุณ';
+
+  @override
+  String get sellAllTitle => 'ขายทั้งหมด?';
+
+  @override
+  String sellAllBody(String name) {
+    return 'คุณกำลังขาย $name ทั้งหมด รายการนี้จะถูกนำออกจากพอร์ต';
+  }
+
+  @override
+  String get sellAllConfirm => 'ขายทั้งหมดและนำออก';
+
+  @override
+  String youHoldUnits(String quantity) {
+    return 'คุณถืออยู่ $quantity หน่วย';
+  }
+
+  @override
+  String get quantityToSell => 'จำนวนที่ขาย';
+
+  @override
+  String get sellAllButton => 'ขายทั้งหมด';
+
+  @override
+  String sellTooMuch(String quantity) {
+    return 'คุณถืออยู่เพียง $quantity หน่วย';
+  }
+
+  @override
+  String get estimatedProceeds => 'มูลค่าโดยประมาณตามราคาตลาด';
+
+  @override
+  String remainingUnits(String quantity) {
+    return 'เหลือ $quantity หน่วยหลังขาย';
+  }
+
+  @override
+  String get confirmSell => 'ยืนยันการขาย';
+
+  @override
+  String get targetLabel => 'เป้าหมาย';
+
+  @override
+  String get undoAction => 'เลิกทำ';
+
+  @override
+  String get deleteAction => 'ลบ';
+
+  @override
+  String get assetsInThisGoal => 'สินทรัพย์ในเป้าหมายนี้';
+
+  @override
+  String get totalLabel => 'รวม';
+
+  @override
+  String get buyNewFromMarket => 'ซื้อใหม่จากตลาด';
+
+  @override
+  String assetRemovedFromGoal(String name) {
+    return 'ย้าย $name ไปที่ยังไม่ได้จัดกลุ่มแล้ว';
+  }
+
+  @override
+  String deleteAssetConfirm(String name) {
+    return 'ลบ \"$name\" ถาวรหรือไม่? ไม่สามารถกู้คืนได้';
+  }
+
+  @override
+  String percentOfTarget(String percent) {
+    return '$percent% ของเป้าหมาย';
+  }
+
+  @override
   String get totalNetWorth => 'ความมั่งคั่งสุทธิ';
 
   @override
@@ -231,9 +573,6 @@ class AppLocalizationsTh extends AppLocalizations {
   String get addTransaction => 'เพิ่มธุรกรรม';
 
   @override
-  String get pricePerUnit => 'ราคาต่อหน่วย';
-
-  @override
   String get passiveIncome => 'สร้างรายได้ทางอ้อม';
 
   @override
@@ -271,9 +610,6 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get retireReady => 'เตรียมเกษียณ';
-
-  @override
-  String get sellAction => 'ขาย';
 
   @override
   String get allocation => 'สัดส่วนการลงทุน';

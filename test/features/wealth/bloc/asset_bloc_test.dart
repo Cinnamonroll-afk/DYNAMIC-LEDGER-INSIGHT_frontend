@@ -266,13 +266,45 @@ void main() {
       build: () {
         when(() => mockMarketRepo.getStockPrice('AAPL')).thenAnswer((_) async => 200.0);
         when(() => mockAssetRepo.updateAsset(any())).thenAnswer((_) async {});
-        when(() => mockAssetRepo.getAssets(any()))
-            .thenAnswer((_) => Stream.fromIterable([[]]));
+        // 1st call = fresh copy before writing (175), later = reload after update (200)
+        var calls = 0;
+        when(() => mockAssetRepo.getAssets(any())).thenAnswer((_) {
+          calls++;
+          return Stream.fromIterable([
+            [_asset(category: 'Stocks', ticker: 'AAPL', currentPrice: calls == 1 ? 175.0 : 200.0)]
+          ]);
+        });
         return AssetBloc(assetRepository: mockAssetRepo, marketApiRepository: mockMarketRepo);
       },
       seed: () => AssetLoaded([_asset(category: 'Stocks', ticker: 'AAPL', currentPrice: 175.0)]),
       act: (bloc) => bloc.add(const SyncAssetPrices()),
-      verify: (_) => verify(() => mockAssetRepo.updateAsset(any())).called(1),
+      verify: (_) => verify(() => mockAssetRepo.updateAsset(any())).called(greaterThanOrEqualTo(1)),
+    );
+
+    blocTest<AssetBloc, AssetState>(
+      'price sync does not undo a goal change made meanwhile (Feedback #4)',
+      build: () {
+        when(() => mockMarketRepo.getStockPrice('AAPL')).thenAnswer((_) async => 200.0);
+        when(() => mockAssetRepo.updateAsset(any())).thenAnswer((_) async {});
+        // Server already has the asset moved to goal "g2"; in-memory copy is stale.
+        var calls = 0;
+        when(() => mockAssetRepo.getAssets(any())).thenAnswer((_) {
+          calls++;
+          return Stream.fromIterable([
+            [_asset(category: 'Stocks', ticker: 'AAPL', currentPrice: calls == 1 ? 175.0 : 200.0).copyWith(portfolioId: 'g2')]
+          ]);
+        });
+        return AssetBloc(assetRepository: mockAssetRepo, marketApiRepository: mockMarketRepo);
+      },
+      seed: () => AssetLoaded([_asset(category: 'Stocks', ticker: 'AAPL', currentPrice: 175.0).copyWith(portfolioId: '')]),
+      act: (bloc) => bloc.add(const SyncAssetPrices()),
+      verify: (_) {
+        final saved = verify(() => mockAssetRepo.updateAsset(captureAny())).captured;
+        expect(saved, isNotEmpty);
+        final first = saved.first as AssetModel;
+        expect(first.portfolioId, 'g2');
+        expect(first.currentPrice, 200.0);
+      },
     );
 
     blocTest<AssetBloc, AssetState>(

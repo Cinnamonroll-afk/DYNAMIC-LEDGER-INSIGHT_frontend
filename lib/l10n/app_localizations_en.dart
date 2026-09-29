@@ -128,6 +128,352 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightEmpty => 'Not enough data for insights yet.';
 
   @override
+  String get insightPeriodDay => 'Day';
+
+  @override
+  String get insightPeriodWeek => 'Week';
+
+  @override
+  String get insightPeriodMonth => 'Month';
+
+  @override
+  String get insightEmptyDay =>
+      'No transactions today yet. Add one to get an insight.';
+
+  @override
+  String get insightEmptyWeek =>
+      'No transactions this week yet. Add one to get an insight.';
+
+  @override
+  String get insightEmptyMonth =>
+      'No transactions this month yet. Add one to get an insight.';
+
+  @override
+  String get insightIncomeLabel => 'Income';
+
+  @override
+  String get insightExpenseLabel => 'Expense';
+
+  @override
+  String get insightVsYesterday => 'vs yesterday';
+
+  @override
+  String get insightVsLastWeek => 'vs last week';
+
+  @override
+  String get insightVsLastMonth => 'vs last month';
+
+  @override
+  String get insightRetry => 'Try again';
+
+  @override
+  String get insightRefresh => 'Get a new insight';
+
+  @override
+  String get aiSuggestionsLabel => 'AI suggestions';
+
+  @override
+  String get aiCategoryDisclaimer =>
+      'AI can make mistakes. Please check before saving.';
+
+  @override
+  String get aiInsightDisclaimer =>
+      'AI-generated advice may not always be accurate.';
+
+  @override
+  String get targetAmountRequired =>
+      'Please enter a target amount greater than 0.';
+
+  @override
+  String get noTargetSet => 'No target set — edit the goal to add one';
+
+  @override
+  String get recordBuyTitle => 'Record a buy';
+
+  @override
+  String get editHoldingTitle => 'Edit holding';
+
+  @override
+  String get pricePerUnit => 'Price per unit';
+
+  @override
+  String get avgPricePerUnit => 'Average price per unit';
+
+  @override
+  String get marketPriceLabel => 'Market price';
+
+  @override
+  String get totalInvested => 'Total invested';
+
+  @override
+  String get totalEditHint =>
+      'You can also type a total — the quantity is calculated for you';
+
+  @override
+  String get useMarketPrice => 'Use market price';
+
+  @override
+  String get assetNameLabel => 'Asset name';
+
+  @override
+  String get unitsSuffix => 'units';
+
+  @override
+  String get addNav => 'Add';
+
+  @override
+  String get expenseSubtitle => 'Record money you spent';
+
+  @override
+  String get incomeSubtitle => 'Record money you received';
+
+  @override
+  String get investSubtitle => 'Buy stocks or crypto from the market';
+
+  @override
+  String get newGoalSubtitle => 'Set a savings or investment goal';
+
+  @override
+  String get addAssetManually => 'Add an asset manually (not in the market)';
+
+  @override
+  String get trendTitle => 'Income & expenses over time';
+
+  @override
+  String get summaryTab => 'Summary';
+
+  @override
+  String get todayLabel => 'Today';
+
+  @override
+  String get yesterdayLabel => 'Yesterday';
+
+  @override
+  String get netLabel => 'Net';
+
+  @override
+  String get noTransactionsInPeriod => 'No transactions in this period';
+
+  @override
+  String get vsPreviousPeriod => 'vs previous period';
+
+  @override
+  String get transactionDeleted => 'Transaction deleted';
+
+  @override
+  String get previousPeriodTooltip => 'Previous period';
+
+  @override
+  String get nextPeriodTooltip => 'Next period';
+
+  @override
+  String get editTransactionSubtitle => 'Change amount, category or date';
+
+  @override
+  String get deleteTransactionSubtitle => 'Remove this transaction permanently';
+
+  @override
+  String thisMonthLabel(String month) {
+    return 'This month ($month)';
+  }
+
+  @override
+  String spentOfIncome(String percent) {
+    return 'Spent $percent% of income';
+  }
+
+  @override
+  String get netThisMonth => 'Left this month';
+
+  @override
+  String get last7Days => '7 days';
+
+  @override
+  String get spendingThisMonth => 'Spending this month';
+
+  @override
+  String get noSpendingThisMonth => 'No expenses this month yet';
+
+  @override
+  String get othersLabel => 'Others';
+
+  @override
+  String get investmentPortfolio => 'Investment portfolio';
+
+  @override
+  String get startInvestingHint => 'Track stocks and crypto toward your goals';
+
+  @override
+  String get totalPortfolioValue => 'Total portfolio value';
+
+  @override
+  String get totalGainLabel => 'total gain';
+
+  @override
+  String get totalLossLabel => 'total loss';
+
+  @override
+  String get costBasisLabel => 'Cost';
+
+  @override
+  String get investAction => 'Invest';
+
+  @override
+  String get assetTypeStock => 'Stocks';
+
+  @override
+  String get assetTypeCrypto => 'Crypto';
+
+  @override
+  String get assetTypeEtf => 'ETF';
+
+  @override
+  String get assetTypeFund => 'Funds';
+
+  @override
+  String get assetTypeOther => 'Other';
+
+  @override
+  String completedGoalsCount(String count) {
+    return 'Completed goals ($count)';
+  }
+
+  @override
+  String get completedBadge => 'Completed';
+
+  @override
+  String get restoreGoal => 'Move back to active';
+
+  @override
+  String get archiveGoal => 'Mark as completed';
+
+  @override
+  String get deleteGoal => 'Delete goal';
+
+  @override
+  String get deleteGoalConfirm =>
+      'Delete this goal? Its assets are kept and moved to Unassigned.';
+
+  @override
+  String get goalAchievedTitle => 'Goal achieved!';
+
+  @override
+  String get goalAchievedBody =>
+      'You reached 100% of this goal. What would you like to do next?';
+
+  @override
+  String get keepActive => 'Keep active';
+
+  @override
+  String get tapAssetForActions =>
+      'Tap an asset to buy more, sell or move it to a goal';
+
+  @override
+  String get wealthEmptyTitle => 'Start building your wealth';
+
+  @override
+  String get wealthEmptyBody =>
+      'Add your first investment, then group investments into goals like a house or retirement.';
+
+  @override
+  String get startInvesting => 'Start investing';
+
+  @override
+  String goalsCount(String count) {
+    return 'Goals ($count)';
+  }
+
+  @override
+  String get buyMoreAction => 'Buy more';
+
+  @override
+  String get buyMoreSubtitle =>
+      'Add units at a new price — the average is updated';
+
+  @override
+  String get sellAction => 'Sell';
+
+  @override
+  String get sellSubtitle => 'Reduce the number of units you hold';
+
+  @override
+  String get assignToGoalAction => 'Move to a goal';
+
+  @override
+  String get assignToGoalSubtitle => 'Put this asset into one of your goals';
+
+  @override
+  String get sellAllTitle => 'Sell all units?';
+
+  @override
+  String sellAllBody(String name) {
+    return 'You are selling all of $name. The holding will be removed from your portfolio.';
+  }
+
+  @override
+  String get sellAllConfirm => 'Sell all and remove';
+
+  @override
+  String youHoldUnits(String quantity) {
+    return 'You hold $quantity units';
+  }
+
+  @override
+  String get quantityToSell => 'Quantity to sell';
+
+  @override
+  String get sellAllButton => 'Sell all';
+
+  @override
+  String sellTooMuch(String quantity) {
+    return 'You only hold $quantity units';
+  }
+
+  @override
+  String get estimatedProceeds => 'Estimated value at market price';
+
+  @override
+  String remainingUnits(String quantity) {
+    return '$quantity units left after selling';
+  }
+
+  @override
+  String get confirmSell => 'Confirm sell';
+
+  @override
+  String get targetLabel => 'Target';
+
+  @override
+  String get undoAction => 'Undo';
+
+  @override
+  String get deleteAction => 'Delete';
+
+  @override
+  String get assetsInThisGoal => 'Assets in this goal';
+
+  @override
+  String get totalLabel => 'Total';
+
+  @override
+  String get buyNewFromMarket => 'Buy from market';
+
+  @override
+  String assetRemovedFromGoal(String name) {
+    return '$name moved to Unassigned';
+  }
+
+  @override
+  String deleteAssetConfirm(String name) {
+    return 'Delete \"$name\" permanently? This cannot be undone.';
+  }
+
+  @override
+  String percentOfTarget(String percent) {
+    return '$percent% of target';
+  }
+
+  @override
   String get totalNetWorth => 'Total Net Worth';
 
   @override
@@ -231,9 +577,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addTransaction => 'Add Transaction';
 
   @override
-  String get pricePerUnit => 'Price per unit';
-
-  @override
   String get passiveIncome => 'Passive Income';
 
   @override
@@ -271,9 +614,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get retireReady => 'Retire Ready';
-
-  @override
-  String get sellAction => 'Sell';
 
   @override
   String get allocation => 'Allocation';

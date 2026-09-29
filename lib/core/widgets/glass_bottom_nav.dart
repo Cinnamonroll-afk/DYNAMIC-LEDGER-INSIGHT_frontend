@@ -43,7 +43,7 @@ class GlassBottomNav extends StatelessWidget {
               children: [
                 _buildNavItem(context, Icons.home_rounded, 0, AppLocalizations.of(context)!.home),
                 _buildNavItem(context, Icons.pie_chart_rounded, 1, AppLocalizations.of(context)!.wealth),
-                _buildNavItem(context, Icons.add_circle, 2, 'Add', isCenter: true),
+                _buildNavItem(context, Icons.add_circle, 2, AppLocalizations.of(context)!.addNav, isCenter: true),
                 _buildNavItem(context, Icons.history_rounded, 3, AppLocalizations.of(context)!.activity),
                 _buildNavItem(context, Icons.person_rounded, 4, AppLocalizations.of(context)!.profile),
               ],
@@ -64,8 +64,8 @@ class GlassBottomNav extends StatelessWidget {
         child: Container(
           width: 50,
           height: 50,
-          decoration: const BoxDecoration(
-            color: AppColors.primary,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary,
             shape: BoxShape.circle,
           ),
           child: const Icon(

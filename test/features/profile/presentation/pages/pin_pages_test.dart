@@ -6,12 +6,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fincontrol/features/profile/presentation/pages/setup_pin_page.dart';
 import 'package:fincontrol/features/profile/presentation/pages/unlock_pin_page.dart';
+import 'package:fincontrol/l10n/app_localizations.dart';
+
+// Test on a phone-sized screen (the app is Android-only; default 800x600 test surface is too short)
+void _phone(WidgetTester t) {
+  t.view.physicalSize = const Size(1080, 2400);
+  t.view.devicePixelRatio = 3.0;
+  addTearDown(t.view.reset);
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-Widget _wrapSetup() => const MaterialApp(home: SetupPinPage());
+Widget _wrapSetup() => const MaterialApp(locale: Locale('en'), localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, home: SetupPinPage());
 
 Widget _wrapUnlock(String pin) => MaterialApp(
+      locale: Locale('en'), localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, 
       home: Scaffold(
         body: Builder(
           builder: (ctx) => ElevatedButton(
@@ -49,19 +58,22 @@ void main() {
     setUp(() => SharedPreferences.setMockInitialValues({}));
 
     testWidgets('shows "Enter New PIN" when no existing PIN is set', (t) async {
+      _phone(t);
       await t.pumpWidget(_wrapSetup());
       await t.pumpAndSettle();
-      expect(find.text('Enter New PIN'), findsOneWidget);
+      expect(find.text('Enter new PIN'), findsOneWidget);
     });
 
     testWidgets('shows "Enter Current PIN" when existing PIN exists in prefs', (t) async {
-      SharedPreferences.setMockInitialValues({'app_lock_pin': '111111'});
+      _phone(t);
+      SharedPreferences.setMockInitialValues({'app_lock_pin_': '111111'});
       await t.pumpWidget(_wrapSetup());
       await t.pumpAndSettle();
-      expect(find.text('Enter Current PIN'), findsOneWidget);
+      expect(find.text('Enter current PIN'), findsOneWidget);
     });
 
     testWidgets('number pad has digits 0–9 and delete button', (t) async {
+      _phone(t);
       await t.pumpWidget(_wrapSetup());
       await t.pumpAndSettle();
       for (final d in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']) {
@@ -75,20 +87,22 @@ void main() {
     setUp(() => SharedPreferences.setMockInitialValues({}));
 
     testWidgets('entering 6 digits advances to "Confirm New PIN"', (t) async {
+      _phone(t);
       await t.pumpWidget(_wrapSetup());
       await t.pumpAndSettle();
       await _enterPin(t, '123456');
-      expect(find.text('Confirm New PIN'), findsOneWidget);
+      expect(find.text('Confirm new PIN'), findsOneWidget);
     });
 
     testWidgets('only 6 digits trigger auto-submit (5 digits stays on Enter New PIN)', (t) async {
+      _phone(t);
       await t.pumpWidget(_wrapSetup());
       await t.pumpAndSettle();
       for (final d in '12345'.split('')) {
         await _tap(t, d);
       }
       await t.pump();
-      expect(find.text('Enter New PIN'), findsOneWidget); // not advanced yet
+      expect(find.text('Enter new PIN'), findsOneWidget); // not advanced yet
     });
   });
 
@@ -96,28 +110,31 @@ void main() {
     setUp(() => SharedPreferences.setMockInitialValues({}));
 
     testWidgets('mismatched confirm PIN shows "PINs do not match. Try again."', (t) async {
+      _phone(t);
       await t.pumpWidget(_wrapSetup());
       await t.pumpAndSettle();
       await _enterPin(t, '123456'); // enter new
       await _enterPin(t, '999999'); // wrong confirm
-      expect(find.text('PINs do not match. Try again.'), findsOneWidget);
+      expect(find.text('PINs do not match'), findsOneWidget);
     });
 
     testWidgets('after mismatch, page stays on Confirm New PIN', (t) async {
+      _phone(t);
       await t.pumpWidget(_wrapSetup());
       await t.pumpAndSettle();
       await _enterPin(t, '123456');
       await _enterPin(t, '999999');
-      expect(find.text('Confirm New PIN'), findsOneWidget);
+      expect(find.text('Confirm new PIN'), findsOneWidget);
     });
 
     testWidgets('error message clears when a new digit is pressed after mismatch', (t) async {
+      _phone(t);
       await t.pumpWidget(_wrapSetup());
       await t.pumpAndSettle();
       await _enterPin(t, '123456');
       await _enterPin(t, '999999'); // mismatch — shows error
       await _tap(t, '1'); // start typing again
-      expect(find.text('PINs do not match. Try again.'), findsNothing);
+      expect(find.text('PINs do not match'), findsNothing);
     });
   });
 
@@ -125,6 +142,7 @@ void main() {
     setUp(() => SharedPreferences.setMockInitialValues({}));
 
     testWidgets('matching confirm PIN saves to SharedPreferences', (t) async {
+      _phone(t);
       await t.pumpWidget(_wrapSetup());
       await t.pumpAndSettle();
       await _enterPin(t, '654321'); // enter new
@@ -135,36 +153,39 @@ void main() {
         // Navigator.pop on root route can throw in test — that's expected
       }
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString('app_lock_pin'), '654321');
+      expect(prefs.getString('app_lock_pin_'), '654321');
     });
   });
 
   group('SetupPinPage — change PIN requires current PIN (URS-06-03)', () {
     setUp(() {
-      SharedPreferences.setMockInitialValues({'app_lock_pin': '111111'});
+      SharedPreferences.setMockInitialValues({'app_lock_pin_': '111111'});
     });
 
     testWidgets('wrong current PIN shows "Incorrect PIN. Try again."', (t) async {
+      _phone(t);
       await t.pumpWidget(_wrapSetup());
       await t.pumpAndSettle();
       await _enterPin(t, '999999'); // wrong current PIN
-      expect(find.text('Incorrect PIN. Try again.'), findsOneWidget);
+      expect(find.text('Incorrect PIN'), findsOneWidget);
     });
 
     testWidgets('correct current PIN advances to "Enter New PIN"', (t) async {
+      _phone(t);
       await t.pumpWidget(_wrapSetup());
       await t.pumpAndSettle();
       await _enterPin(t, '111111'); // correct current PIN
-      expect(find.text('Enter New PIN'), findsOneWidget);
+      expect(find.text('Enter new PIN'), findsOneWidget);
     });
 
     testWidgets('wrong current PIN clears input for retry', (t) async {
+      _phone(t);
       await t.pumpWidget(_wrapSetup());
       await t.pumpAndSettle();
       await _enterPin(t, '999999'); // wrong
       // Can type again after clearing
       await _tap(t, '1');
-      expect(find.text('Incorrect PIN. Try again.'), findsNothing);
+      expect(find.text('Incorrect PIN'), findsNothing);
     });
   });
 
@@ -172,15 +193,17 @@ void main() {
     setUp(() => SharedPreferences.setMockInitialValues({}));
 
     testWidgets('delete button does not crash when input is empty', (t) async {
+      _phone(t);
       await t.pumpWidget(_wrapSetup());
       await t.pumpAndSettle();
       await t.tap(find.byIcon(Icons.backspace_outlined));
       await t.pump();
       // No exception thrown — page still shows Enter New PIN
-      expect(find.text('Enter New PIN'), findsOneWidget);
+      expect(find.text('Enter new PIN'), findsOneWidget);
     });
 
     testWidgets('delete button removes last digit (prevents 6-digit auto-submit)', (t) async {
+      _phone(t);
       await t.pumpWidget(_wrapSetup());
       await t.pumpAndSettle();
       for (final d in '12345'.split('')) {
@@ -190,7 +213,7 @@ void main() {
       await t.pump();
       await _tap(t, '9'); // now has '12349' — 5 digits, still no submit
       await t.pump();
-      expect(find.text('Enter New PIN'), findsOneWidget); // not advanced
+      expect(find.text('Enter new PIN'), findsOneWidget); // not advanced
     });
   });
 
@@ -198,16 +221,18 @@ void main() {
 
   group('UnlockPinPage — UI (URS-06-05)', () {
     testWidgets('shows "Enter App Lock PIN" heading', (t) async {
+      _phone(t);
       await t.pumpWidget(
-        const MaterialApp(home: UnlockPinPage(correctPin: '123456')),
+        const MaterialApp(locale: Locale('en'), localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, home: UnlockPinPage(correctPin: '123456')),
       );
       await t.pump();
       expect(find.text('Enter App Lock PIN'), findsOneWidget);
     });
 
     testWidgets('lock icon is displayed', (t) async {
+      _phone(t);
       await t.pumpWidget(
-        const MaterialApp(home: UnlockPinPage(correctPin: '123456')),
+        const MaterialApp(locale: Locale('en'), localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, home: UnlockPinPage(correctPin: '123456')),
       );
       await t.pump();
       expect(find.byIcon(Icons.lock_outline), findsOneWidget);
@@ -216,8 +241,9 @@ void main() {
 
   group('UnlockPinPage — wrong PIN (URS-06-05)', () {
     testWidgets('incorrect PIN shows "Incorrect PIN. Try again."', (t) async {
+      _phone(t);
       await t.pumpWidget(
-        const MaterialApp(home: UnlockPinPage(correctPin: '123456')),
+        const MaterialApp(locale: Locale('en'), localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, home: UnlockPinPage(correctPin: '123456')),
       );
       await t.pump();
       await _enterPin(t, '000000');
@@ -225,8 +251,9 @@ void main() {
     });
 
     testWidgets('incorrect PIN clears input so user can retry', (t) async {
+      _phone(t);
       await t.pumpWidget(
-        const MaterialApp(home: UnlockPinPage(correctPin: '123456')),
+        const MaterialApp(locale: Locale('en'), localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, home: UnlockPinPage(correctPin: '123456')),
       );
       await t.pump();
       await _enterPin(t, '000000'); // wrong
@@ -235,8 +262,9 @@ void main() {
     });
 
     testWidgets('multiple wrong attempts keep showing error each time', (t) async {
+      _phone(t);
       await t.pumpWidget(
-        const MaterialApp(home: UnlockPinPage(correctPin: '123456')),
+        const MaterialApp(locale: Locale('en'), localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, home: UnlockPinPage(correctPin: '123456')),
       );
       await t.pump();
       await _enterPin(t, '000000'); // wrong 1
@@ -248,6 +276,7 @@ void main() {
 
   group('UnlockPinPage — PopScope (URS-06-05)', () {
     testWidgets('PopScope(canPop: false) — back press does not dismiss unlock page', (t) async {
+      _phone(t);
       // Push from a parent so there is a route to pop to
       await t.pumpWidget(_wrapUnlock('123456'));
       await t.pump();
@@ -265,8 +294,9 @@ void main() {
 
   group('UnlockPinPage — delete button', () {
     testWidgets('delete button does not crash on empty input', (t) async {
+      _phone(t);
       await t.pumpWidget(
-        const MaterialApp(home: UnlockPinPage(correctPin: '123456')),
+        const MaterialApp(locale: Locale('en'), localizationsDelegates: AppLocalizations.localizationsDelegates, supportedLocales: AppLocalizations.supportedLocales, home: UnlockPinPage(correctPin: '123456')),
       );
       await t.pump();
       await t.tap(find.byIcon(Icons.backspace_outlined));

@@ -21,12 +21,26 @@ class TransactionModel {
     return TransactionModel(
       id: id,
       userId: map['user_id'] as String? ?? '',
-      type: map['type'] as String? ?? '',
+      type: normalizeType(map['type'] as String? ?? ''),
       amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
       category: map['category'] as String? ?? '',
       note: map['note'] as String? ?? '',
       date: map['date'] != null ? DateTime.tryParse(map['date'].toString()) ?? DateTime.now() : DateTime.now(),
     );
+  }
+
+  /// Older versions saved the translated label when the app was in Thai.
+  /// Map those back to the English keys the rest of the app uses.
+  static String normalizeType(String raw) {
+    switch (raw.trim()) {
+      case 'รายรับ':
+        return 'Income';
+      case 'รายจ่าย':
+      case 'ค่าใช้จ่าย':
+        return 'Expense';
+      default:
+        return raw;
+    }
   }
 
   Map<String, dynamic> toMap() {

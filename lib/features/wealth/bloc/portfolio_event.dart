@@ -38,7 +38,11 @@ class UpdatePortfolio extends PortfolioEvent {
 
 class DeletePortfolio extends PortfolioEvent {
   final String id;
-  const DeletePortfolio(this.id);
+
+  /// Called after the server has deleted the goal (its assets are now
+  /// unassigned on the server) — used to reload assets at the right time.
+  final void Function()? onDeleted;
+  const DeletePortfolio(this.id, {this.onDeleted});
 
   @override
   List<Object> get props => [id];

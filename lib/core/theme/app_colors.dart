@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Shared Colors
-  static const Color primary = Color(0xFF1E40AF); // Trust Blue
+  static const Color primary = Color(0xFF1E40AF); // Trust Blue (light mode)
+
+  /// Brighter blue for dark mode — the navy above only has ~2:1 contrast on the
+  /// dark background, so blue text/buttons blended in (Feedback #9).
+  /// #3B82F6: 4.9:1 on the dark background, 3.7:1 for white text on it.
+  static const Color primaryDark = Color(0xFF3B82F6);
   static const Color accent = Color(0xFF059669); // Profit Green
   static const Color destructive = Color(0xFFDC2626); // Loss Red
   static const Color border = Color(0x14FFFFFF); // Subtle white border 0.08 opacity

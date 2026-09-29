@@ -8,9 +8,10 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.darkBackground,
-      primaryColor: AppColors.primary,
+      primaryColor: AppColors.primaryDark,
       colorScheme: const ColorScheme.dark(
-        primary: AppColors.primary,
+        primary: AppColors.primaryDark,
+        onPrimary: Colors.white,
         secondary: AppColors.accent,
         error: AppColors.destructive,
         surface: AppColors.darkBackground,

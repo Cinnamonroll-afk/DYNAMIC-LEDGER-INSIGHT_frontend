@@ -67,6 +67,7 @@ class PortfolioBloc extends Bloc<PortfolioEvent, PortfolioState> {
     try {
       await _portfolioRepository.deletePortfolio(event.id);
       add(const LoadPortfolios(''));
+      event.onDeleted?.call();
     } catch (e) {
       if (!isClosed) emit(PortfolioError(e.toString()));
     }

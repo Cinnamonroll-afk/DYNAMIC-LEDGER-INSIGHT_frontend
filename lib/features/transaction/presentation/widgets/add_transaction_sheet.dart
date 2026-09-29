@@ -14,7 +14,10 @@ enum TransactionType { income, expense }
 
 class AddTransactionSheet extends StatefulWidget {
   final TransactionModel? existingTransaction;
-  const AddTransactionSheet({super.key, this.existingTransaction});
+
+  /// Preselected type for a new transaction (Home "+ Income" / "− Expense").
+  final TransactionType? initialType;
+  const AddTransactionSheet({super.key, this.existingTransaction, this.initialType});
 
   @override
   State<AddTransactionSheet> createState() => _AddTransactionSheetState();
@@ -34,6 +37,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialType != null) _type = widget.initialType!;
     if (widget.existingTransaction != null) {
       final t = widget.existingTransaction!;
       // Compare lowercase to avoid localization issues in initState
@@ -111,7 +115,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       category: _selectedCategory!,
       date: _selectedDate,
       note: note,
-      type: _type == TransactionType.income ? AppLocalizations.of(context)!.income : AppLocalizations.of(context)!.expense,
+      // Always store the English key — the translated label ("รายรับ") made
+      // Thai-mode transactions invisible to every total and filter.
+      type: _type == TransactionType.income ? 'Income' : 'Expense',
     );
     
     if (widget.existingTransaction == null) {
@@ -258,6 +264,15 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             // Suggestion chips
             if (_suggestions.isNotEmpty) ...[
               const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.auto_awesome, size: 14, color: primaryColor),
+                  const SizedBox(width: 6),
+                  Text(AppLocalizations.of(context)!.aiSuggestionsLabel,
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mutedTextColor)),
+                ],
+              ),
+              const SizedBox(height: 8),
               Wrap(
                 spacing: 8, runSpacing: 8,
                 children: _suggestions.map((s) {
@@ -272,7 +287,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: sel ? primaryColor : (isDarkMode ? Colors.white24 : Colors.grey.shade300)),
                       ),
-                      child: Text(s,
+                      child: Text(AppCategories.localizedLabel(s, Localizations.localeOf(context).languageCode),
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -282,6 +297,19 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                     ),
                   );
                 }).toList(),
+              ),
+              const SizedBox(height: 8),
+              // AI disclaimer (Feedback #2)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, size: 14, color: mutedTextColor),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(AppLocalizations.of(context)!.aiCategoryDisclaimer,
+                      style: TextStyle(fontSize: 11, color: mutedTextColor, height: 1.3)),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
             ],

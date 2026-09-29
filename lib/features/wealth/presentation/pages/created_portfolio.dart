@@ -1,8 +1,6 @@
 import 'package:fincontrol/features/wealth/presentation/pages/invest_page.dart';
 import 'package:fincontrol/l10n/app_localizations.dart';
 import 'package:fincontrol/features/wealth/presentation/pages/create_new_portfolio.dart';
-import 'package:fincontrol/features/wealth/bloc/portfolio_bloc.dart';
-import 'package:fincontrol/features/wealth/bloc/portfolio_event.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:fincontrol/core/widgets/glass_container.dart';
@@ -13,8 +11,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fincontrol/features/wealth/bloc/asset_bloc.dart';
 import 'package:fincontrol/features/wealth/bloc/asset_event.dart';
 import 'package:fincontrol/features/wealth/bloc/asset_state.dart';
-import 'package:fincontrol/features/wealth/data/repositories/asset_repository.dart';
-import 'package:fincontrol/features/wealth/presentation/widgets/add_entry_sheet.dart';
+import 'package:fincontrol/features/wealth/presentation/widgets/goal_actions.dart';
+import 'package:fincontrol/features/wealth/presentation/widgets/asset_pick_details.dart';
+import 'package:fincontrol/core/utils/currency_formatter.dart';
+import 'package:fincontrol/features/settings/bloc/currency_cubit.dart';
+import 'package:fincontrol/features/wealth/logic/asset_math.dart';
+import 'package:fincontrol/features/wealth/presentation/widgets/asset_actions_sheet.dart';
 
 class CreatedPortfolio extends StatefulWidget {
   final PortfolioModel? portfolio;
@@ -31,35 +33,37 @@ class CreatedPortfolio extends StatefulWidget {
 }
 
 class _CreatedPortfolioState extends State<CreatedPortfolio> {
+  /// Assets swiped away, hidden while the Undo snackbar is showing.
+  final Set<String> _pendingRemoval = {};
 
-  Widget _optionTile({required IconData icon, required Color color, required String title, required String subtitle, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 15)),
-                  Text(subtitle, style: TextStyle(color: color.withValues(alpha: 0.7), fontSize: 12, height: 1.4)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  void _removeFromGoalWithUndo(AssetModel asset) {
+    final l10n = AppLocalizations.of(context)!;
+    final bloc = context.read<AssetBloc>();
+    setState(() => _pendingRemoval.add(asset.id));
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger
+        .showSnackBar(SnackBar(
+          content: Text(l10n.assetRemovedFromGoal(asset.tickerSymbol.isNotEmpty ? asset.tickerSymbol : asset.name)),
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(label: l10n.undoAction, onPressed: () {}),
+        ))
+        .closed
+        .then((reason) {
+      if (reason == SnackBarClosedReason.action) {
+        if (mounted) setState(() => _pendingRemoval.remove(asset.id));
+        return;
+      }
+      if (!bloc.isClosed) moveAssetsToGoal(bloc, [asset], '');
+      // keep hidden until the reload arrives; then it's no longer in this goal
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) setState(() => _pendingRemoval.remove(asset.id));
+      });
+    });
   }
+
+
+
 
   void _showAddAssetSheet(BuildContext context) {
     final textColor = Theme.of(context).textTheme.bodyLarge?.color;
@@ -214,10 +218,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                             )),
                           ),
                           const SizedBox(width: 12),
-                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(asset.name, style: TextStyle(color: textColor, fontWeight: FontWeight.w600, fontSize: 15)),
-                            Text(asset.category, style: TextStyle(color: textColor?.withValues(alpha: 0.5), fontSize: 12)),
-                          ])),
+                          AssetPickDetails(asset: asset, textColor: textColor),
                           Container(
                             width: 24, height: 24,
                             decoration: BoxDecoration(
@@ -238,11 +239,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: tempSelected.isEmpty ? null : () {
-                    for (final asset in tempSelected) {
-                      context.read<AssetBloc>().add(
-                        UpdateAsset(asset.copyWith(portfolioId: widget.portfolio!.id)),
-                      );
-                    }
+                    moveAssetsToGoal(context.read<AssetBloc>(), tempSelected, widget.portfolio!.id);
                     Navigator.pop(sheetCtx);
                   },
                   style: ElevatedButton.styleFrom(
@@ -283,8 +280,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
           ),
           TextButton(
             onPressed: () {
-              context.read<PortfolioBloc>().add(DeletePortfolio(widget.portfolio!.id));
-              context.read<AssetBloc>().add(const LoadAssets()); // reload so unassigned appear
+              deleteGoalAndRefresh(context, widget.portfolio!.id); // assets → Unassigned
               Navigator.pop(context); // close dialog
               Navigator.pop(context); // go back to wealth page
             },
@@ -302,6 +298,11 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
     final mutedTextColor = Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey;
     final primaryColor = Theme.of(context).colorScheme.primary;
 
+    // All amounts in the user's currency; .BK tickers are THB, others USD (Feedback #6)
+    final cs = context.watch<CurrencyCubit>().state;
+    String money(double v, {int decimals = 2}) =>
+        CurrencyFormatter.format(v, cs, decimals: decimals, fromCurrency: cs.selectedCurrency);
+
     return BlocBuilder<AssetBloc, AssetState>(
       builder: (context, state) {
         List<AssetModel> assets = [];
@@ -311,11 +312,13 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
         if (state is AssetLoaded) {
           // Filter locally — don't dispatch LoadAssets(portfolioId) which would pollute the global bloc
           assets = widget.portfolio != null
-              ? state.assets.where((a) => a.portfolioId == widget.portfolio!.id).toList()
+              ? state.assets
+                  .where((a) => a.portfolioId == widget.portfolio!.id && !_pendingRemoval.contains(a.id))
+                  .toList()
               : state.assets;
           for (var asset in assets) {
-            totalBalance += asset.currentPrice * asset.totalQuantity;
-            totalInvested += asset.averageBuyPrice * asset.totalQuantity;
+            totalBalance += AssetMath.marketValue(asset, cs);
+            totalInvested += AssetMath.costBasis(asset, cs);
           }
         } else {
           totalBalance = widget.currentAmount ?? 0.0;
@@ -326,7 +329,11 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
         final bool isPositive = totalReturn >= 0;
         final Color returnColor = isPositive ? Colors.greenAccent.shade400 : Colors.redAccent.shade400;
 
-        final double? targetGoal = widget.portfolio?.targetGoal;
+        // Target is stored in USD → show it in the user's currency
+        final double? rawTarget = widget.portfolio?.targetGoal;
+        final double? targetGoal = (rawTarget != null && rawTarget > 0)
+            ? CurrencyFormatter.convert(rawTarget, cs, fromCurrency: 'USD')
+            : null;
         final bool hasGoal = targetGoal != null && targetGoal > 0;
         final double goalProgress = hasGoal
             ? (totalBalance / targetGoal).clamp(0.0, 1.0)
@@ -345,7 +352,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
         if (assets.isNotEmpty && totalBalance > 0) {
           for (int i = 0; i < assets.length; i++) {
             final asset = assets[i];
-            final double assetValue = asset.currentPrice * asset.totalQuantity;
+            final double assetValue = AssetMath.marketValue(asset, cs);
             final double percentage = (assetValue / totalBalance) * 100;
             pieChartSections.add(
               PieChartSectionData(
@@ -399,7 +406,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
               icon: Icon(Icons.edit_outlined, color: textColor, size: 18),
               label: Text(AppLocalizations.of(context)!.editAction, style: TextStyle(color: textColor, fontSize: 13)),
               onPressed: () async {
-                await Navigator.push(
+                final updated = await Navigator.push<PortfolioModel>(
                   context,
                   MaterialPageRoute(
                     builder: (_) => CreatePortfolioPage(
@@ -407,6 +414,13 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                     ),
                   ),
                 );
+                // Refresh this page with the edited name/target
+                if (updated != null && context.mounted) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => CreatedPortfolio(portfolio: updated)),
+                  );
+                }
               },
             ),
             TextButton.icon(
@@ -442,7 +456,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '\$${totalBalance.toStringAsFixed(2)}',
+                            money(totalBalance),
                             style: TextStyle(
                               color: textColor,
                               fontSize: 36,
@@ -474,7 +488,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                                       Flexible(
                                         child: Text(
                                           assets.isNotEmpty
-                                              ? '${isPositive ? '+' : '-'}\$${totalReturn.abs().toStringAsFixed(2)} (${returnPercentage.abs().toStringAsFixed(1)}%)'
+                                              ? '${isPositive ? '+' : '\u2212'}${money(totalReturn.abs())} (${returnPercentage.abs().toStringAsFixed(1)}%)'
                                               : (hasGoal
                                                   ? '${(goalProgress * 100).toStringAsFixed(0)}% of Target'
                                                   : 'No assets yet'),
@@ -508,7 +522,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Target: \$${targetGoal.toStringAsFixed(0)}',
+                                  '${AppLocalizations.of(context)!.targetLabel}: ${money(targetGoal, decimals: 0)}',
                                   style: TextStyle(
                                     color: mutedTextColor,
                                     fontSize: 13,
@@ -572,9 +586,13 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                       onPressed: () => _showAddAssetSheet(context),
                       icon: const Icon(Icons.add, size: 18),
                       label: Text(AppLocalizations.of(context)!.addAssetBtn),
+                      // Filled pill so it stands out from the dark background (Feedback #9)
                       style: TextButton.styleFrom(
-                        foregroundColor: primaryColor,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        foregroundColor: Colors.white,
+                        backgroundColor: primaryColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        shape: const StadiumBorder(),
+                        textStyle: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
                 ],
@@ -629,11 +647,10 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                           if (asset.category == 'Stock') iconData = Icons.trending_up;
                           if (asset.category == 'Crypto') iconData = Icons.currency_bitcoin;
 
-                          final bool isCrypto = asset.category == 'Crypto';
                           
                           // Calculate profit/loss for this individual asset
-                          final double assetInvested = asset.averageBuyPrice * asset.totalQuantity;
-                          final double assetCurrentValue = asset.currentPrice * asset.totalQuantity;
+                          final double assetInvested = AssetMath.costBasis(asset, cs);
+                          final double assetCurrentValue = AssetMath.marketValue(asset, cs);
                           final double assetProfit = assetCurrentValue - assetInvested;
                           final double assetReturnPct = assetInvested > 0 ? (assetProfit / assetInvested) * 100 : 0.0;
                           final bool assetIsPositive = assetProfit >= 0;
@@ -645,79 +662,14 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                             background: Container(
                               alignment: Alignment.centerRight,
                               padding: const EdgeInsets.only(right: 20),
-                              decoration: BoxDecoration(color: Colors.redAccent, borderRadius: BorderRadius.circular(20)),
-                              child: const Icon(Icons.delete, color: Colors.white),
+                              decoration: BoxDecoration(color: Colors.orangeAccent, borderRadius: BorderRadius.circular(20)),
+                              child: const Icon(Icons.link_off, color: Colors.white),
                             ),
-                            onDismissed: (direction) {
-                              context.read<AssetBloc>().add(DeleteAsset(asset.id));
-                            },
+                            // Swipe = remove from this goal (→ Unassigned), with Undo.
+                            // Permanent delete only from the menu, with confirmation.
+                            onDismissed: (direction) => _removeFromGoalWithUndo(asset),
                             child: GestureDetector(
-                              onTap: () {
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  backgroundColor: Colors.transparent,
-                                  builder: (sheetCtx) {
-                                    final tc = Theme.of(context).textTheme.bodyLarge?.color;
-                                    final pc = Theme.of(context).colorScheme.primary;
-                                    return GlassContainer(
-                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Container(width: 40, height: 4,
-                                            decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2))),
-                                          const SizedBox(height: 16),
-                                          Text(asset.name, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: tc)),
-                                          Text(asset.category, style: TextStyle(fontSize: 13, color: tc?.withValues(alpha: 0.5))),
-                                          const SizedBox(height: 24),
-                                          // Edit
-                                          _optionTile(
-                                            icon: Icons.edit_outlined,
-                                            color: pc,
-                                            title: AppLocalizations.of(context)!.editAction,
-                                            subtitle: AppLocalizations.of(context)!.changeQtyBuyPrice,
-                                            onTap: () {
-                                              Navigator.pop(sheetCtx);
-                                              showModalBottomSheet(
-                                                context: context,
-                                                isScrollControlled: true,
-                                                backgroundColor: Colors.transparent,
-                                                builder: (c) => AddEntrySheet(asset: asset, portfolioId: widget.portfolio?.id),
-                                              );
-                                            },
-                                          ),
-                                          const SizedBox(height: 10),
-                                          // Remove from goal
-                                          _optionTile(
-                                            icon: Icons.link_off,
-                                            color: Colors.orangeAccent,
-                                            title: AppLocalizations.of(context)!.removeFromGoal,
-                                            subtitle: AppLocalizations.of(context)!.removeFromGoalSubtitle,
-                                            onTap: () {
-                                              context.read<AssetBloc>().add(UpdateAsset(asset.copyWith(portfolioId: '')));
-                                              Navigator.pop(sheetCtx);
-                                            },
-                                          ),
-                                          const SizedBox(height: 10),
-                                          // Delete permanently
-                                          _optionTile(
-                                            icon: Icons.delete_outline,
-                                            color: Colors.redAccent,
-                                            title: AppLocalizations.of(context)!.deletePermanently,
-                                            subtitle: AppLocalizations.of(context)!.deletePermanentlySubtitle,
-                                            onTap: () {
-                                              context.read<AssetBloc>().add(DeleteAsset(asset.id));
-                                              Navigator.pop(sheetCtx);
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
+                              onTap: () => showAssetActionsSheet(context, asset),
                               child: GlassContainer(
                                 padding: const EdgeInsets.all(16),
                                 child: Row(
@@ -786,7 +738,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                                       crossAxisAlignment: CrossAxisAlignment.end,
                                       children: [
                                         Text(
-                                          '\$${assetCurrentValue.toStringAsFixed(2)}',
+                                          money(assetCurrentValue),
                                           style: TextStyle(
                                             color: textColor,
                                             fontWeight: FontWeight.bold,
@@ -795,7 +747,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          'Qty: ${isCrypto ? asset.totalQuantity.toStringAsFixed(6) : asset.totalQuantity.toStringAsFixed(2)}',
+                                          AppLocalizations.of(context)!.sharesUnits(AssetMath.formatQuantity(asset.totalQuantity)),
                                           style: TextStyle(
                                             color: mutedTextColor,
                                             fontWeight: FontWeight.w600,
@@ -804,7 +756,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          '${assetIsPositive ? '+' : '-'}\$${assetProfit.abs().toStringAsFixed(2)} (${assetReturnPct.abs().toStringAsFixed(2)}%)',
+                                          '${assetIsPositive ? '+' : '\u2212'}${money(assetProfit.abs())} (${assetReturnPct.abs().toStringAsFixed(2)}%)',
                                           style: TextStyle(
                                             color: assetReturnColor,
                                             fontWeight: FontWeight.bold,

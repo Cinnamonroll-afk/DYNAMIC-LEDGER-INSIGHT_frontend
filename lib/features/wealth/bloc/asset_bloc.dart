@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fincontrol/features/wealth/bloc/asset_event.dart';
 import 'package:fincontrol/features/wealth/bloc/asset_state.dart';
+import 'package:fincontrol/features/wealth/data/models/asset_model.dart';
 import 'package:fincontrol/features/wealth/data/repositories/asset_repository.dart';
 import 'package:fincontrol/features/wealth/data/repositories/market_api_repository.dart';
 
@@ -96,6 +97,8 @@ class AssetBloc extends Bloc<AssetEvent, AssetState> {
       final currentState = state;
       if (currentState is AssetLoaded) {
         bool changed = false;
+        List<AssetModel>? fresh; // loaded lazily, only if a price changed
+        bool freshLoaded = false;
         for (final asset in currentState.assets) {
           if (asset.tickerSymbol.isEmpty) continue;
 
@@ -107,8 +110,26 @@ class AssetBloc extends Bloc<AssetEvent, AssetState> {
           }
 
           if (price > 0 && price != asset.currentPrice) {
-            final updated = asset.copyWith(currentPrice: price);
-            await _assetRepository.updateAsset(updated);
+            // Write the price onto a FRESH copy from the server: the in-memory
+            // list may be stale (e.g. the asset was just moved to/from a goal)
+            // and writing the old copy back would silently undo that change.
+            if (!freshLoaded) {
+              freshLoaded = true;
+              try {
+                fresh = await _assetRepository.getAssets().first;
+              } catch (_) {
+                fresh = null; // fall back to the in-memory copy
+              }
+            }
+            AssetModel? base = asset;
+            if (fresh != null) {
+              base = null;
+              for (final f in fresh) {
+                if (f.id == asset.id) base = f;
+              }
+            }
+            if (base == null) continue; // deleted in the meantime
+            await _assetRepository.updateAsset(base.copyWith(currentPrice: price));
             changed = true;
           }
         }

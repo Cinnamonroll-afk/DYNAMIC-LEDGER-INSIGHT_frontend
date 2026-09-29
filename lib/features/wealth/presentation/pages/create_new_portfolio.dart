@@ -7,11 +7,15 @@ import 'package:fincontrol/features/wealth/presentation/pages/invest_page.dart';
 import 'package:fincontrol/features/wealth/bloc/portfolio_event.dart';
 import 'package:fincontrol/features/wealth/bloc/asset_bloc.dart';
 import 'package:fincontrol/features/wealth/bloc/asset_state.dart';
-import 'package:fincontrol/features/wealth/bloc/asset_event.dart';
 import 'package:fincontrol/features/wealth/data/models/portfolio_model.dart';
 import 'package:fincontrol/features/wealth/data/models/asset_model.dart';
 import 'package:fincontrol/features/wealth/data/repositories/portfolio_repository.dart';
 import 'package:fincontrol/core/widgets/glass_container.dart';
+import 'package:fincontrol/features/wealth/presentation/widgets/asset_pick_details.dart';
+import 'package:fincontrol/features/wealth/presentation/widgets/goal_actions.dart';
+import 'package:fincontrol/core/utils/currency_formatter.dart';
+import 'package:fincontrol/features/settings/bloc/currency_cubit.dart';
+import 'package:fincontrol/features/wealth/logic/asset_math.dart';
 
 class CreatePortfolioPage extends StatefulWidget {
   final PortfolioModel? existingPortfolio;
@@ -26,9 +30,10 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
   final TextEditingController _goalController = TextEditingController();
-  bool _setGoal = false;
+  String? _targetError; // target amount is required (Feedback #4)
   IconData _selectedIcon = Icons.monetization_on;
   List<AssetModel> _selectedAssets = [];
+  Set<String> _originalAssetIds = {}; // edit mode: assets already in the goal
   bool _isSaving = false;
 
   late List<String> _suggestions;
@@ -40,9 +45,16 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
       _nameController.text = widget.existingPortfolio!.name;
       _noteController.text = widget.existingPortfolio!.note;
       _selectedIcon = IconData(widget.existingPortfolio!.icon as int, fontFamily: 'MaterialIcons');
-      if (widget.existingPortfolio!.targetGoal != null) {
-        _setGoal = true;
-        _goalController.text = widget.existingPortfolio!.targetGoal.toString();
+      // Target is stored in USD → show it in the user's currency
+      final t = widget.existingPortfolio!.targetGoal;
+      if (t != null && t > 0) {
+        _goalController.text = _plain(_usdToDisplay(t, context.read<CurrencyCubit>().state));
+      }
+      // Show the assets already in this goal (removing one moves it to Unassigned)
+      final st = context.read<AssetBloc>().state;
+      if (st is AssetLoaded) {
+        _selectedAssets = st.assets.where((a) => a.portfolioId == widget.existingPortfolio!.id).toList();
+        _originalAssetIds = _selectedAssets.map((a) => a.id).toSet();
       }
     }
   }
@@ -55,37 +67,65 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
     super.dispose();
   }
 
+  /// Latest version of each selected asset from the bloc (the copies kept in
+  /// [_selectedAssets] may be stale, e.g. after a merge added more units).
+  List<AssetModel> _latestSelected() {
+    final st = context.read<AssetBloc>().state;
+    if (st is! AssetLoaded) return _selectedAssets;
+    return _selectedAssets.map((sel) {
+      for (final a in st.assets) {
+        if (a.id == sel.id) return a;
+      }
+      return sel;
+    }).toList();
+  }
+
   Future<void> _createGoalAndAssignAssets() async {
-    if (_nameController.text.isEmpty) return;
-    setState(() => _isSaving = true);
+    final l10n = AppLocalizations.of(context)!;
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.pleaseFillAllFields)));
+      return;
+    }
+    final target = double.tryParse(_goalController.text.replaceAll(',', '').trim());
+    if (target == null || target <= 0) {
+      setState(() => _targetError = l10n.targetAmountRequired);
+      return;
+    }
+    setState(() {
+      _targetError = null;
+      _isSaving = true;
+    });
     try {
       final goal = PortfolioModel(
         id: widget.existingPortfolio?.id ?? '',
         userId: widget.existingPortfolio?.userId ?? '',
-        name: _nameController.text,
+        name: _nameController.text.trim(),
         icon: _selectedIcon.codePoint,
         note: _noteController.text,
-        targetGoal: double.tryParse(_goalController.text),
+        targetGoal: _displayToUsd(target, context.read<CurrencyCubit>().state),
         createdAt: widget.existingPortfolio?.createdAt ?? DateTime.now(),
       );
+      final assetBloc = context.read<AssetBloc>();
+      final toAssign = _latestSelected();
 
       if (widget.existingPortfolio != null) {
-        // Update existing portfolio
+        // Update the goal; add newly selected assets; removed ones → Unassigned
         context.read<PortfolioBloc>().add(UpdatePortfolio(goal));
+        final keptIds = toAssign.map((a) => a.id).toSet();
+        final st = assetBloc.state;
+        final removed = st is AssetLoaded
+            ? st.assets.where((a) => _originalAssetIds.contains(a.id) && !keptIds.contains(a.id)).toList()
+            : <AssetModel>[];
+        if (removed.isNotEmpty) moveAssetsToGoal(assetBloc, removed, '');
+        moveAssetsToGoal(assetBloc, toAssign, goal.id);
+        if (mounted) Navigator.pop(context, goal); // back to where edit was opened
+        return;
       } else {
-        // Create new portfolio and get back the ID
+        // Create new goal and get back the ID
         final newId = await PortfolioRepository().addPortfolio(goal);
-        // Reload portfolios
+        if (!mounted) return;
         context.read<PortfolioBloc>().add(const LoadPortfolios(''));
-        // Assign selected assets to the new portfolio
-        if (_selectedAssets.isNotEmpty) {
-          for (final asset in _selectedAssets) {
-            context.read<AssetBloc>().add(
-              UpdateAsset(asset.copyWith(portfolioId: newId)),
-            );
-          }
-        }
-        // Build the full portfolio model with the real ID to pass to detail page
+        moveAssetsToGoal(assetBloc, toAssign, newId);
         final createdPortfolio = PortfolioModel(
           id: newId,
           userId: goal.userId,
@@ -98,19 +138,10 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
         if (mounted) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder: (_) => CreatedPortfolio(portfolio: createdPortfolio),
-            ),
+            MaterialPageRoute(builder: (_) => CreatedPortfolio(portfolio: createdPortfolio)),
           );
         }
         return;
-      }
-
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => CreatedPortfolio(portfolio: widget.existingPortfolio)),
-        );
       }
     } catch (e) {
       if (mounted) {
@@ -121,6 +152,31 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  /// After "Browse Market & Create New" returns, pre-select the asset(s) the
+  /// user just bought so they don't have to pick them again (Feedback #4).
+  Future<void> _selectNewlyAddedAssets(AssetBloc bloc, Map<String, double> before) async {
+    bool isNew(AssetModel a) =>
+        a.portfolioId.isEmpty && (!before.containsKey(a.id) || before[a.id] != a.totalQuantity);
+    bool hasNew(AssetState s) => s is AssetLoaded && s.assets.any(isNew);
+
+    AssetState state = bloc.state;
+    if (!hasNew(state)) {
+      try {
+        state = await bloc.stream.firstWhere(hasNew).timeout(const Duration(seconds: 8));
+      } catch (_) {
+        return; // nothing bought, or the server was slow — user can still pick manually
+      }
+    }
+    if (!mounted || state is! AssetLoaded) return;
+    final added = state.assets.where(isNew).toList();
+    setState(() {
+      for (final a in added) {
+        _selectedAssets.removeWhere((x) => x.id == a.id);
+        _selectedAssets.add(a);
+      }
+    });
   }
 
   void _showSelectAssetsSheet(BuildContext context) {
@@ -223,28 +279,7 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      asset.name,
-                                      style: TextStyle(
-                                        color: textColor,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                    Text(
-                                      asset.category,
-                                      style: TextStyle(
-                                        color: textColor?.withValues(alpha: 0.5),
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              AssetPickDetails(asset: asset, textColor: textColor),
                               if (isSelected)
                                 Icon(Icons.check_circle, color: primaryColor, size: 22),
                             ],
@@ -282,330 +317,351 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
     );
   }
 
+  // ── Currency helpers: targets are stored in USD, entered in the user's currency
+  double _usdToDisplay(double usd, CurrencyState cs) =>
+      CurrencyFormatter.convert(usd, cs, fromCurrency: 'USD');
+  double _displayToUsd(double v, CurrencyState cs) =>
+      (cs.selectedCurrency == 'THB' && cs.usdToThbRate > 0) ? v / cs.usdToThbRate : v;
+
+  double get _parsedTarget => double.tryParse(_goalController.text.replaceAll(',', '').trim()) ?? 0;
+
+  static String _plain(double v) {
+    final s = v.toStringAsFixed(2);
+    return s.endsWith('.00') ? s.substring(0, s.length - 3) : s;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
-    final mutedTextColor = Theme.of(context).textTheme.bodySmall?.color;
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyLarge?.color;
+    final mutedTextColor = theme.textTheme.bodySmall?.color;
+    final primaryColor = theme.colorScheme.primary;
+    final isDark = theme.brightness == Brightness.dark;
+    final fieldBg = isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04);
+    final cardBg = isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.7);
+    final cs = context.watch<CurrencyCubit>().state;
 
-    _suggestions = [
-      AppLocalizations.of(context)!.passiveIncome,
-      AppLocalizations.of(context)!.growthStocks,
-      AppLocalizations.of(context)!.retireReady,
-      AppLocalizations.of(context)!.saveGoal,
-    ];
+    _suggestions = [l10n.passiveIncome, l10n.growthStocks, l10n.retireReady, l10n.saveGoal];
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: textColor),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          widget.existingPortfolio != null
-              ? AppLocalizations.of(context)!.updateGoal
-              : AppLocalizations.of(context)!.newGoal,
-          style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
+    // Latest data for the selected assets
+    final assetState = context.watch<AssetBloc>().state;
+    final allAssets = assetState is AssetLoaded ? assetState.assets : <AssetModel>[];
+    final selected = _latestSelected();
+    final unassignedCount = allAssets
+        .where((a) => a.portfolioId.isEmpty && !selected.any((s) => s.id == a.id))
+        .length;
+    final selectedTotal = selected.fold<double>(0, (s, a) => s + AssetMath.marketValue(a, cs));
+    final target = _parsedTarget;
+    final progress = target > 0 ? (selectedTotal / target).clamp(0.0, 1.0) : 0.0;
+
+    InputDecoration deco(String hint, {String? prefix}) => InputDecoration(
+          hintText: hint,
+          hintStyle: TextStyle(color: mutedTextColor?.withValues(alpha: 0.6), fontWeight: FontWeight.normal),
+          prefixText: prefix,
+          prefixStyle: TextStyle(color: mutedTextColor, fontWeight: FontWeight.w700, fontSize: 16),
+          filled: true,
+          fillColor: fieldBg,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        );
+
+    Widget sectionTitle(String text, {String? trailing}) => Padding(
+          padding: const EdgeInsets.only(bottom: 10, top: 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(text, style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w800)),
+              ),
+              if (trailing != null) Text(trailing, style: TextStyle(color: mutedTextColor, fontSize: 12.5)),
+            ],
+          ),
+        );
+
+    Widget card({required Widget child, EdgeInsets padding = const EdgeInsets.all(16)}) => Container(
+          width: double.infinity,
+          padding: padding,
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: (textColor ?? Colors.grey).withValues(alpha: 0.08)),
+          ),
+          child: child,
+        );
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: isDark
+            ? const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF0F172A), Color(0xFF1E1B4B)])
+            : const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFF8FAFC), Color(0xFFE0E7FF)]),
       ),
-      body: Column(
-        children: [
-          const SizedBox(height: 16),
-          Center(
-            child: GestureDetector(
-              onTap: () => _showIconPicker(context, textColor, primaryColor),
-              child: Stack(
-                children: [
-                  GlassContainer(
-                    width: 96,
-                    height: 96,
-                    borderRadius: BorderRadius.circular(48),
-                    color: primaryColor.withValues(alpha: 0.2),
-                    child: Center(
-                      child: Icon(_selectedIcon, size: 40, color: primaryColor),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(icon: Icon(Icons.arrow_back, color: textColor), onPressed: () => Navigator.pop(context)),
+          title: Text(
+            widget.existingPortfolio != null ? l10n.updateGoal : l10n.newGoal,
+            style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+          ),
+          centerTitle: true,
+        ),
+        body: SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  children: [
+                    // ── 1. Goal: icon + name + suggestions
+                    card(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () => _showIconPicker(context, textColor, primaryColor),
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Container(
+                                      width: 56,
+                                      height: 56,
+                                      decoration: BoxDecoration(color: primaryColor.withValues(alpha: 0.15), shape: BoxShape.circle),
+                                      child: Icon(_selectedIcon, color: primaryColor, size: 28),
+                                    ),
+                                    Positioned(
+                                      right: -2,
+                                      bottom: -2,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(color: primaryColor, shape: BoxShape.circle),
+                                        child: const Icon(Icons.edit, size: 12, color: Colors.white),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: TextField(
+                                  controller: _nameController,
+                                  onChanged: (_) => setState(() {}),
+                                  style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.w700),
+                                  decoration: deco(l10n.goalName),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _suggestions
+                                .map((sug) => ActionChip(
+                                      label: Text(sug, style: TextStyle(color: textColor, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                                      backgroundColor: fieldBg,
+                                      side: BorderSide.none,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                      onPressed: () => setState(() => _nameController.text = sug),
+                                    ))
+                                .toList(),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Positioned(
-                    bottom: 0, right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: primaryColor,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Theme.of(context).scaffoldBackgroundColor,
-                          width: 2,
+                    const SizedBox(height: 20),
+
+                    // ── 2. Target (required) + note
+                    sectionTitle('${l10n.setTargetAmount} *'),
+                    TextField(
+                      controller: _goalController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (_) => setState(() => _targetError = null),
+                      style: TextStyle(color: textColor, fontSize: 20, fontWeight: FontWeight.w800),
+                      decoration: deco(l10n.enterTargetAmount, prefix: '${cs.symbol} ').copyWith(errorText: _targetError),
+                    ),
+                    const SizedBox(height: 16),
+                    sectionTitle(l10n.note),
+                    TextField(
+                      controller: _noteController,
+                      minLines: 2,
+                      maxLines: 4,
+                      style: TextStyle(color: textColor, fontSize: 15),
+                      decoration: deco(l10n.addOptionalNote),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── 3. Assets in this goal
+                    sectionTitle(l10n.assetsInThisGoal, trailing: selected.isEmpty ? null : '${selected.length}'),
+                    if (selected.isEmpty)
+                      card(
+                        child: Row(
+                          children: [
+                            Icon(Icons.inventory_2_outlined, color: mutedTextColor),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(l10n.addExistingOrNewAsset,
+                                  style: TextStyle(color: mutedTextColor, fontSize: 13, height: 1.4)),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      card(
+                        padding: const EdgeInsets.fromLTRB(14, 6, 6, 14),
+                        child: Column(
+                          children: [
+                            for (final a in selected) ...[
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 6),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 38,
+                                      height: 38,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(color: primaryColor.withValues(alpha: 0.15), shape: BoxShape.circle),
+                                      child: Text(
+                                        (a.tickerSymbol.isNotEmpty ? a.tickerSymbol : a.name).substring(0, 1).toUpperCase(),
+                                        style: TextStyle(color: primaryColor, fontWeight: FontWeight.w800),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    AssetPickDetails(asset: a, textColor: textColor),
+                                    IconButton(
+                                      tooltip: l10n.removeFromGoal,
+                                      visualDensity: VisualDensity.compact,
+                                      icon: Icon(Icons.close, size: 18, color: mutedTextColor),
+                                      onPressed: () => setState(() => _selectedAssets.removeWhere((x) => x.id == a.id)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            Divider(color: (textColor ?? Colors.grey).withValues(alpha: 0.1), height: 16),
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(l10n.totalLabel, style: TextStyle(color: mutedTextColor, fontSize: 13)),
+                                      const Spacer(),
+                                      Text(
+                                        CurrencyFormatter.format(selectedTotal, cs, fromCurrency: cs.selectedCurrency),
+                                        style: TextStyle(color: textColor, fontWeight: FontWeight.w800, fontSize: 15),
+                                      ),
+                                    ],
+                                  ),
+                                  if (target > 0) ...[
+                                    const SizedBox(height: 8),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: LinearProgressIndicator(
+                                        value: progress,
+                                        minHeight: 6,
+                                        backgroundColor: primaryColor.withValues(alpha: 0.12),
+                                        valueColor: AlwaysStoppedAnimation(primaryColor),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Text(
+                                        l10n.percentOfTarget((progress * 100).toStringAsFixed(0)),
+                                        style: TextStyle(color: primaryColor, fontWeight: FontWeight.w700, fontSize: 12),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: const Icon(Icons.edit, size: 16, color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 32),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              children: [
-                _buildInputField(
-                  controller: _nameController,
-                  hint: AppLocalizations.of(context)!.goalName,
-                  textColor: textColor,
-                  mutedTextColor: mutedTextColor,
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 8, left: 16, bottom: 24),
-                  child: Text(
-                    AppLocalizations.of(context)!.length25Characters(
-                        _nameController.text.length.toString()),
-                    style: TextStyle(color: mutedTextColor, fontSize: 12),
-                  ),
-                ),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _suggestions.map((suggestion) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: GestureDetector(
-                          onTap: () => setState(() => _nameController.text = suggestion),
-                          child: GlassContainer(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            borderRadius: BorderRadius.circular(20),
-                            child: Text(
-                              suggestion,
-                              style: TextStyle(
-                                color: textColor,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _showSelectAssetsSheet(context),
+                            icon: const Icon(Icons.playlist_add_check, size: 18),
+                            label: Text('${l10n.selectExistingAssets} ($unassignedCount)',
+                                maxLines: 1, overflow: TextOverflow.ellipsis),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: primaryColor,
+                              side: BorderSide(color: primaryColor.withValues(alpha: 0.5)),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                             ),
                           ),
                         ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => setState(() => _setGoal = !_setGoal),
-                      child: Container(
-                        width: 28, height: 28,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _setGoal ? primaryColor : Colors.transparent,
-                          border: Border.all(
-                            color: _setGoal ? primaryColor : (mutedTextColor ?? Colors.grey),
-                            width: 2,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _buyNewFromMarket,
+                            icon: const Icon(Icons.add_chart, size: 18),
+                            label: Text(l10n.buyNewFromMarket, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: primaryColor,
+                              side: BorderSide(color: primaryColor.withValues(alpha: 0.5)),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
                           ),
                         ),
-                        child: _setGoal
-                            ? const Icon(Icons.check, size: 16, color: Colors.white)
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      AppLocalizations.of(context)!.setTargetAmount,
-                      style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w600),
+                      ],
                     ),
                   ],
                 ),
-                if (_setGoal) ...[
-                  const SizedBox(height: 16),
-                  _buildInputField(
-                    controller: _goalController,
-                    hint: AppLocalizations.of(context)!.enterTargetAmount,
-                    prefixIcon: Icons.attach_money,
-                    isNumber: true,
-                    textColor: textColor,
-                    mutedTextColor: mutedTextColor,
-                  ),
-                ],
-                const SizedBox(height: 32),
-                Row(
-                  children: [
-                    Icon(Icons.description_outlined, color: mutedTextColor, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      AppLocalizations.of(context)!.note,
-                      style: TextStyle(
-                        color: mutedTextColor,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
+              ),
+
+              // ── Sticky save button
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: primaryColor.withValues(alpha: 0.3),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                GlassContainer(
-                  height: 100,
-                  padding: EdgeInsets.zero,
-                  borderRadius: BorderRadius.circular(16),
-                  child: TextField(
-                    controller: _noteController,
-                    style: TextStyle(color: textColor, fontSize: 15),
-                    maxLines: null,
-                    decoration: InputDecoration(
-                      hintText: AppLocalizations.of(context)!.addOptionalNote,
-                      hintStyle: TextStyle(
-                        color: mutedTextColor?.withValues(alpha: 0.5),
-                        fontSize: 15,
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.all(16),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 40),
-                Text(
-                  AppLocalizations.of(context)!.assignAssets,
-                  style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  AppLocalizations.of(context)!.addExistingOrNewAsset,
-                  style: TextStyle(color: mutedTextColor, fontSize: 13, height: 1.5),
-                ),
-                const SizedBox(height: 16),
-                GestureDetector(
-                  onTap: () => _showSelectAssetsSheet(context),
-                  child: GlassContainer(
-                    borderRadius: BorderRadius.circular(16),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    color: primaryColor.withValues(alpha: 0.1),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _selectedAssets.isEmpty
-                              ? AppLocalizations.of(context)!.selectExistingAssets
-                              : '${_selectedAssets.length} asset(s) selected',
-                          style: TextStyle(
-                            color: primaryColor,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 16,
+                    onPressed: _isSaving ? null : _createGoalAndAssignAssets,
+                    child: _isSaving
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text(
+                            widget.existingPortfolio != null ? l10n.updateGoal : l10n.createGoal,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           ),
-                        ),
-                        Icon(Icons.arrow_forward_ios, color: primaryColor, size: 16),
-                      ],
-                    ),
                   ),
                 ),
-                const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const InvestPage()),
-                    );
-                  },
-                  child: GlassContainer(
-                    borderRadius: BorderRadius.circular(16),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          AppLocalizations.of(context)!.browseMarketCreateNew,
-                          style: TextStyle(
-                            color: mutedTextColor,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
-                        ),
-                        Icon(Icons.open_in_new, color: mutedTextColor, size: 16),
-                      ],
-                    ),
-                  ),
-                ),
-                if (_selectedAssets.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _selectedAssets.map((asset) {
-                      return Chip(
-                        label: Text(
-                          asset.name,
-                          style: TextStyle(color: primaryColor, fontSize: 13),
-                        ),
-                        backgroundColor: primaryColor.withValues(alpha: 0.1),
-                        deleteIcon: Icon(Icons.close, size: 16, color: primaryColor),
-                        onDeleted: () {
-                          setState(() => _selectedAssets.removeWhere((a) => a.id == asset.id));
-                        },
-                        side: BorderSide(color: primaryColor.withValues(alpha: 0.3)),
-                      );
-                    }).toList(),
-                  ),
-                ],
-                const SizedBox(height: 40),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: 0,
-                  ),
-                  onPressed: _isSaving ? null : _createGoalAndAssignAssets,
-                  child: _isSaving
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : Text(
-                          widget.existingPortfolio != null ? AppLocalizations.of(context)!.updateGoal : AppLocalizations.of(context)!.createGoal,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                ),
-                const SizedBox(height: 40),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String hint,
-    IconData? prefixIcon,
-    bool isNumber = false,
-    required Color? textColor,
-    required Color? mutedTextColor,
-  }) {
-    return GlassContainer(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      borderRadius: BorderRadius.circular(16),
-      child: TextField(
-        controller: controller,
-        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-        style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w600),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(
-            color: mutedTextColor?.withValues(alpha: 0.5),
-            fontSize: 16,
-            fontWeight: FontWeight.normal,
-          ),
-          prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: mutedTextColor) : null,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 16),
-        ),
-        onChanged: (value) => setState(() {}),
-      ),
-    );
+  /// Buy from the market, then come back here with the new asset pre-selected.
+  Future<void> _buyNewFromMarket() async {
+    final assetBloc = context.read<AssetBloc>();
+    final st = assetBloc.state;
+    final before = <String, double>{
+      if (st is AssetLoaded)
+        for (final a in st.assets) a.id: a.totalQuantity,
+    };
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => const InvestPage()));
+    if (!mounted) return;
+    await _selectNewlyAddedAssets(assetBloc, before);
   }
 
   void _showIconPicker(BuildContext context, Color? textColor, Color primaryColor) {

@@ -151,7 +151,8 @@ void main() {
       expect(cubit.convert(100.0, fromCurrency: 'USD'), 100.0);
     });
 
-    test('convert USD to THB multiplies by rate', () {
+    test('convert USD to THB multiplies by rate', () async {
+      await cubit.setCurrency('THB'); 
       final rate = cubit.state.usdToThbRate;
       expect(cubit.convert(100.0, fromCurrency: 'USD'), closeTo(100.0 * rate, 0.001));
     });

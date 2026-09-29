@@ -332,6 +332,630 @@ abstract class AppLocalizations {
   /// **'Not enough data for insights yet.'**
   String get insightEmpty;
 
+  /// No description provided for @insightPeriodDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get insightPeriodDay;
+
+  /// No description provided for @insightPeriodWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Week'**
+  String get insightPeriodWeek;
+
+  /// No description provided for @insightPeriodMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get insightPeriodMonth;
+
+  /// No description provided for @insightEmptyDay.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions today yet. Add one to get an insight.'**
+  String get insightEmptyDay;
+
+  /// No description provided for @insightEmptyWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions this week yet. Add one to get an insight.'**
+  String get insightEmptyWeek;
+
+  /// No description provided for @insightEmptyMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions this month yet. Add one to get an insight.'**
+  String get insightEmptyMonth;
+
+  /// No description provided for @insightIncomeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Income'**
+  String get insightIncomeLabel;
+
+  /// No description provided for @insightExpenseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Expense'**
+  String get insightExpenseLabel;
+
+  /// No description provided for @insightVsYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'vs yesterday'**
+  String get insightVsYesterday;
+
+  /// No description provided for @insightVsLastWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'vs last week'**
+  String get insightVsLastWeek;
+
+  /// No description provided for @insightVsLastMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'vs last month'**
+  String get insightVsLastMonth;
+
+  /// No description provided for @insightRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get insightRetry;
+
+  /// No description provided for @insightRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Get a new insight'**
+  String get insightRefresh;
+
+  /// No description provided for @aiSuggestionsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'AI suggestions'**
+  String get aiSuggestionsLabel;
+
+  /// No description provided for @aiCategoryDisclaimer.
+  ///
+  /// In en, this message translates to:
+  /// **'AI can make mistakes. Please check before saving.'**
+  String get aiCategoryDisclaimer;
+
+  /// No description provided for @aiInsightDisclaimer.
+  ///
+  /// In en, this message translates to:
+  /// **'AI-generated advice may not always be accurate.'**
+  String get aiInsightDisclaimer;
+
+  /// No description provided for @targetAmountRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a target amount greater than 0.'**
+  String get targetAmountRequired;
+
+  /// No description provided for @noTargetSet.
+  ///
+  /// In en, this message translates to:
+  /// **'No target set — edit the goal to add one'**
+  String get noTargetSet;
+
+  /// No description provided for @recordBuyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Record a buy'**
+  String get recordBuyTitle;
+
+  /// No description provided for @editHoldingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit holding'**
+  String get editHoldingTitle;
+
+  /// No description provided for @pricePerUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Price per unit'**
+  String get pricePerUnit;
+
+  /// No description provided for @avgPricePerUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Average price per unit'**
+  String get avgPricePerUnit;
+
+  /// No description provided for @marketPriceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Market price'**
+  String get marketPriceLabel;
+
+  /// No description provided for @totalInvested.
+  ///
+  /// In en, this message translates to:
+  /// **'Total invested'**
+  String get totalInvested;
+
+  /// No description provided for @totalEditHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You can also type a total — the quantity is calculated for you'**
+  String get totalEditHint;
+
+  /// No description provided for @useMarketPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Use market price'**
+  String get useMarketPrice;
+
+  /// No description provided for @assetNameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Asset name'**
+  String get assetNameLabel;
+
+  /// No description provided for @unitsSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'units'**
+  String get unitsSuffix;
+
+  /// No description provided for @addNav.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get addNav;
+
+  /// No description provided for @expenseSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Record money you spent'**
+  String get expenseSubtitle;
+
+  /// No description provided for @incomeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Record money you received'**
+  String get incomeSubtitle;
+
+  /// No description provided for @investSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy stocks or crypto from the market'**
+  String get investSubtitle;
+
+  /// No description provided for @newGoalSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a savings or investment goal'**
+  String get newGoalSubtitle;
+
+  /// No description provided for @addAssetManually.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an asset manually (not in the market)'**
+  String get addAssetManually;
+
+  /// No description provided for @trendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Income & expenses over time'**
+  String get trendTitle;
+
+  /// No description provided for @summaryTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get summaryTab;
+
+  /// No description provided for @todayLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get todayLabel;
+
+  /// No description provided for @yesterdayLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get yesterdayLabel;
+
+  /// No description provided for @netLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Net'**
+  String get netLabel;
+
+  /// No description provided for @noTransactionsInPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions in this period'**
+  String get noTransactionsInPeriod;
+
+  /// No description provided for @vsPreviousPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'vs previous period'**
+  String get vsPreviousPeriod;
+
+  /// No description provided for @transactionDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction deleted'**
+  String get transactionDeleted;
+
+  /// No description provided for @previousPeriodTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous period'**
+  String get previousPeriodTooltip;
+
+  /// No description provided for @nextPeriodTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Next period'**
+  String get nextPeriodTooltip;
+
+  /// No description provided for @editTransactionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change amount, category or date'**
+  String get editTransactionSubtitle;
+
+  /// No description provided for @deleteTransactionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this transaction permanently'**
+  String get deleteTransactionSubtitle;
+
+  /// No description provided for @thisMonthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'This month ({month})'**
+  String thisMonthLabel(String month);
+
+  /// No description provided for @spentOfIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'Spent {percent}% of income'**
+  String spentOfIncome(String percent);
+
+  /// No description provided for @netThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Left this month'**
+  String get netThisMonth;
+
+  /// No description provided for @last7Days.
+  ///
+  /// In en, this message translates to:
+  /// **'7 days'**
+  String get last7Days;
+
+  /// No description provided for @spendingThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending this month'**
+  String get spendingThisMonth;
+
+  /// No description provided for @noSpendingThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'No expenses this month yet'**
+  String get noSpendingThisMonth;
+
+  /// No description provided for @othersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Others'**
+  String get othersLabel;
+
+  /// No description provided for @investmentPortfolio.
+  ///
+  /// In en, this message translates to:
+  /// **'Investment portfolio'**
+  String get investmentPortfolio;
+
+  /// No description provided for @startInvestingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Track stocks and crypto toward your goals'**
+  String get startInvestingHint;
+
+  /// No description provided for @totalPortfolioValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Total portfolio value'**
+  String get totalPortfolioValue;
+
+  /// No description provided for @totalGainLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'total gain'**
+  String get totalGainLabel;
+
+  /// No description provided for @totalLossLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'total loss'**
+  String get totalLossLabel;
+
+  /// No description provided for @costBasisLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cost'**
+  String get costBasisLabel;
+
+  /// No description provided for @investAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Invest'**
+  String get investAction;
+
+  /// No description provided for @assetTypeStock.
+  ///
+  /// In en, this message translates to:
+  /// **'Stocks'**
+  String get assetTypeStock;
+
+  /// No description provided for @assetTypeCrypto.
+  ///
+  /// In en, this message translates to:
+  /// **'Crypto'**
+  String get assetTypeCrypto;
+
+  /// No description provided for @assetTypeEtf.
+  ///
+  /// In en, this message translates to:
+  /// **'ETF'**
+  String get assetTypeEtf;
+
+  /// No description provided for @assetTypeFund.
+  ///
+  /// In en, this message translates to:
+  /// **'Funds'**
+  String get assetTypeFund;
+
+  /// No description provided for @assetTypeOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get assetTypeOther;
+
+  /// No description provided for @completedGoalsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed goals ({count})'**
+  String completedGoalsCount(String count);
+
+  /// No description provided for @completedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get completedBadge;
+
+  /// No description provided for @restoreGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Move back to active'**
+  String get restoreGoal;
+
+  /// No description provided for @archiveGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as completed'**
+  String get archiveGoal;
+
+  /// No description provided for @deleteGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete goal'**
+  String get deleteGoal;
+
+  /// No description provided for @deleteGoalConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this goal? Its assets are kept and moved to Unassigned.'**
+  String get deleteGoalConfirm;
+
+  /// No description provided for @goalAchievedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal achieved!'**
+  String get goalAchievedTitle;
+
+  /// No description provided for @goalAchievedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You reached 100% of this goal. What would you like to do next?'**
+  String get goalAchievedBody;
+
+  /// No description provided for @keepActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep active'**
+  String get keepActive;
+
+  /// No description provided for @tapAssetForActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap an asset to buy more, sell or move it to a goal'**
+  String get tapAssetForActions;
+
+  /// No description provided for @wealthEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start building your wealth'**
+  String get wealthEmptyTitle;
+
+  /// No description provided for @wealthEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your first investment, then group investments into goals like a house or retirement.'**
+  String get wealthEmptyBody;
+
+  /// No description provided for @startInvesting.
+  ///
+  /// In en, this message translates to:
+  /// **'Start investing'**
+  String get startInvesting;
+
+  /// No description provided for @goalsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Goals ({count})'**
+  String goalsCount(String count);
+
+  /// No description provided for @buyMoreAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy more'**
+  String get buyMoreAction;
+
+  /// No description provided for @buyMoreSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add units at a new price — the average is updated'**
+  String get buyMoreSubtitle;
+
+  /// No description provided for @sellAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell'**
+  String get sellAction;
+
+  /// No description provided for @sellSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reduce the number of units you hold'**
+  String get sellSubtitle;
+
+  /// No description provided for @assignToGoalAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to a goal'**
+  String get assignToGoalAction;
+
+  /// No description provided for @assignToGoalSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Put this asset into one of your goals'**
+  String get assignToGoalSubtitle;
+
+  /// No description provided for @sellAllTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell all units?'**
+  String get sellAllTitle;
+
+  /// No description provided for @sellAllBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You are selling all of {name}. The holding will be removed from your portfolio.'**
+  String sellAllBody(String name);
+
+  /// No description provided for @sellAllConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell all and remove'**
+  String get sellAllConfirm;
+
+  /// No description provided for @youHoldUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'You hold {quantity} units'**
+  String youHoldUnits(String quantity);
+
+  /// No description provided for @quantityToSell.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity to sell'**
+  String get quantityToSell;
+
+  /// No description provided for @sellAllButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Sell all'**
+  String get sellAllButton;
+
+  /// No description provided for @sellTooMuch.
+  ///
+  /// In en, this message translates to:
+  /// **'You only hold {quantity} units'**
+  String sellTooMuch(String quantity);
+
+  /// No description provided for @estimatedProceeds.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated value at market price'**
+  String get estimatedProceeds;
+
+  /// No description provided for @remainingUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'{quantity} units left after selling'**
+  String remainingUnits(String quantity);
+
+  /// No description provided for @confirmSell.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm sell'**
+  String get confirmSell;
+
+  /// No description provided for @targetLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Target'**
+  String get targetLabel;
+
+  /// No description provided for @undoAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get undoAction;
+
+  /// No description provided for @deleteAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get deleteAction;
+
+  /// No description provided for @assetsInThisGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Assets in this goal'**
+  String get assetsInThisGoal;
+
+  /// No description provided for @totalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get totalLabel;
+
+  /// No description provided for @buyNewFromMarket.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy from market'**
+  String get buyNewFromMarket;
+
+  /// No description provided for @assetRemovedFromGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} moved to Unassigned'**
+  String assetRemovedFromGoal(String name);
+
+  /// No description provided for @deleteAssetConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{name}\" permanently? This cannot be undone.'**
+  String deleteAssetConfirm(String name);
+
+  /// No description provided for @percentOfTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% of target'**
+  String percentOfTarget(String percent);
+
   /// No description provided for @totalNetWorth.
   ///
   /// In en, this message translates to:
@@ -530,12 +1154,6 @@ abstract class AppLocalizations {
   /// **'Add Transaction'**
   String get addTransaction;
 
-  /// No description provided for @pricePerUnit.
-  ///
-  /// In en, this message translates to:
-  /// **'Price per unit'**
-  String get pricePerUnit;
-
   /// No description provided for @passiveIncome.
   ///
   /// In en, this message translates to:
@@ -613,12 +1231,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Retire Ready'**
   String get retireReady;
-
-  /// No description provided for @sellAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Sell'**
-  String get sellAction;
 
   /// No description provided for @allocation.
   ///

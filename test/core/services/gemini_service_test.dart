@@ -5,7 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 void main() {
   setUpAll(() async {
     // Provide empty env so dotenv doesn't throw
-    dotenv.testLoad(fileInput: 'GEMINI_API_KEY=');
+    dotenv.loadFromString(envString: 'GEMINI_API_KEY=');
   });
 
   group('GeminiService.suggestCategories — guard conditions', () {
@@ -34,20 +34,55 @@ void main() {
     });
   });
 
-  group('GeminiService.generateFinancialInsight — guard conditions', () {
-    test('returns null when transactions string is empty', () async {
-      final result = await GeminiService.generateFinancialInsight('', 'en');
-      expect(result, isNull);
+  group('GeminiService.generateBilingualInsight — guard conditions', () {
+    test('returns null when facts string is empty', () async {
+      expect(await GeminiService.generateBilingualInsight(''), isNull);
     });
 
-    test('returns null when transactions string is only whitespace', () async {
-      final result = await GeminiService.generateFinancialInsight('   ', 'th');
-      expect(result, isNull);
+    test('returns null when facts string is only whitespace', () async {
+      expect(await GeminiService.generateBilingualInsight('   '), isNull);
     });
 
-    test('returns null when transactions string is only newlines', () async {
-      final result = await GeminiService.generateFinancialInsight('\n\n', 'en');
-      expect(result, isNull);
+    test('returns null when facts string is only newlines', () async {
+      expect(await GeminiService.generateBilingualInsight('\n\n'), isNull);
+    });
+  });
+
+  group('GeminiService.parseBilingualInsight — response parsing', () {
+    test('parses a valid JSON reply into Thai and English', () {
+      final r = GeminiService.parseBilingualInsight(
+        '{"th": "สัปดาห์นี้คุณใช้จ่ายน้อยลง", "en": "You spent less this week"}',
+      );
+      expect(r, isNotNull);
+      expect(r!.th, 'สัปดาห์นี้คุณใช้จ่ายน้อยลง');
+      expect(r.en, 'You spent less this week');
+    });
+
+    test('extracts JSON wrapped in extra text / code fences', () {
+      final r = GeminiService.parseBilingualInsight(
+        '```json\n{"th": "ดีมาก", "en": "Great job"}\n```',
+      );
+      expect(r?.en, 'Great job');
+    });
+
+    test('strips markdown bold and newlines', () {
+      final r = GeminiService.parseBilingualInsight(
+        '{"th": "**ดี**\\nมาก", "en": "**Good**\\njob"}',
+      );
+      expect(r?.en, 'Good job');
+      expect(r?.th, 'ดี มาก');
+    });
+
+    test('returns null when one language is missing', () {
+      expect(GeminiService.parseBilingualInsight('{"en": "Only English"}'), isNull);
+    });
+
+    test('returns null for non-JSON text', () {
+      expect(GeminiService.parseBilingualInsight('Sorry, I cannot help.'), isNull);
+    });
+
+    test('returns null for malformed JSON', () {
+      expect(GeminiService.parseBilingualInsight('{"th": "x", "en": }'), isNull);
     });
   });
 
@@ -77,20 +112,10 @@ void main() {
     });
   });
 
-  group('GeminiService.generateFinancialInsight — error path (empty key → catch → null)', () {
-    test('valid transactions string with invalid API key returns null (does not throw)', () async {
-      final result = await GeminiService.generateFinancialInsight(
-        'income: 5000 THB salary\nexpense: 200 THB coffee',
-        'en',
-      );
-      // With empty API key the model call fails; catch block returns null
-      expect(result, isNull);
-    });
-
-    test('Thai language request with invalid API key returns null (does not throw)', () async {
-      final result = await GeminiService.generateFinancialInsight(
-        'income: 5000 salary\nexpense: 100 food',
-        'th',
+  group('GeminiService.generateBilingualInsight — error path (empty key → catch → null)', () {
+    test('valid facts with invalid API key returns null (does not throw)', () async {
+      final result = await GeminiService.generateBilingualInsight(
+        'Period: this week\nTotal income: \$5,000.00\nTotal expense: \$200.00',
       );
       expect(result, isNull);
     });

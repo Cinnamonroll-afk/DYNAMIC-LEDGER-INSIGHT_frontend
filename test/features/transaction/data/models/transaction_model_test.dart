@@ -121,4 +121,21 @@ void main() {
       expect(m2.note, model.note);
     });
   });
+
+  group('TransactionModel type normalisation (Thai-mode bug)', () {
+    test('Thai "รายรับ" is read as Income', () {
+      final m = TransactionModel.fromMap({...validMap, 'type': 'รายรับ'}, 'tx1');
+      expect(m.type.toLowerCase(), 'income');
+    });
+
+    test('Thai "รายจ่าย" is read as Expense', () {
+      final m = TransactionModel.fromMap({...validMap, 'type': 'รายจ่าย'}, 'tx1');
+      expect(m.type.toLowerCase(), 'expense');
+    });
+
+    test('English values are kept as they are', () {
+      expect(TransactionModel.normalizeType('income'), 'income');
+      expect(TransactionModel.normalizeType('Expense'), 'Expense');
+    });
+  });
 }

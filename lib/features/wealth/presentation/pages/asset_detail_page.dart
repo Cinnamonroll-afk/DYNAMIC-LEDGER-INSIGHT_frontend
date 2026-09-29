@@ -691,10 +691,15 @@ class _AssetDetailPageState extends State<AssetDetailPage> {
                   context: context,
                   isScrollControlled: true,
                   backgroundColor: Colors.transparent,
-                  builder: (context) => AddEntrySheet(asset: asset, portfolioId: widget.portfolioId),
+                  builder: (context) => AddEntrySheet(
+                    // pass the live price so the sheet prefills the real market price
+                    asset: (_fetchedPrice != null && _fetchedPrice! > 0) ? asset.copyWith(currentPrice: _fetchedPrice) : asset,
+                    portfolioId: widget.portfolioId,
+                  ),
                 );
                 if (saved == true && context.mounted) {
-                  Navigator.pop(context);
+                  // true → Market page closes too, back to where the user started (goal page)
+                  Navigator.pop(context, true);
                 }
               },
               child: const Text(

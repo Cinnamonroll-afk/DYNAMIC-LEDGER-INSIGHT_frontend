@@ -1,4 +1,10 @@
-import 'dart:ui';
+// Wealth page (Feedback #8) — layout follows common investing apps
+// (Dime, Webull, Monarch):
+//   portfolio value + total gain (amount & %) + allocation by type + cost
+//   → primary actions (Invest / New goal)
+//   → goals as a vertical list with progress (completed goals collapsed)
+//   → unassigned holdings (tap for buy more / sell / move / delete)
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,13 +14,42 @@ import 'package:fincontrol/features/wealth/bloc/asset_event.dart';
 import 'package:fincontrol/features/wealth/bloc/portfolio_bloc.dart';
 import 'package:fincontrol/features/wealth/bloc/portfolio_event.dart';
 import 'package:fincontrol/features/wealth/bloc/portfolio_state.dart';
+import 'package:fincontrol/features/wealth/data/models/asset_model.dart';
+import 'package:fincontrol/features/wealth/data/models/portfolio_model.dart';
+import 'package:fincontrol/features/wealth/logic/asset_math.dart';
 import 'package:fincontrol/features/wealth/presentation/pages/create_new_portfolio.dart';
-import 'package:fincontrol/features/settings/bloc/currency_cubit.dart';
-import 'package:fincontrol/core/utils/currency_formatter.dart';
-import 'package:fincontrol/l10n/app_localizations.dart';
-import 'package:fincontrol/core/widgets/glass_container.dart';
 import 'package:fincontrol/features/wealth/presentation/pages/invest_page.dart';
 import 'package:fincontrol/features/wealth/presentation/pages/created_portfolio.dart';
+import 'package:fincontrol/features/wealth/presentation/widgets/goal_actions.dart';
+import 'package:fincontrol/features/wealth/presentation/widgets/asset_actions_sheet.dart';
+import 'package:fincontrol/features/wealth/presentation/widgets/asset_pick_details.dart';
+import 'package:fincontrol/features/settings/bloc/currency_cubit.dart';
+import 'package:fincontrol/core/utils/currency_formatter.dart';
+import 'package:fincontrol/core/widgets/glass_container.dart';
+import 'package:fincontrol/l10n/app_localizations.dart';
+
+const _green = Color(0xFF10B981);
+const _red = Color(0xFFEF4444);
+
+/// Asset type buckets for the allocation bar.
+enum _AssetType { stock, crypto, etf, fund, other }
+
+_AssetType _typeOf(AssetModel a) {
+  final c = a.category.toLowerCase();
+  if (c.startsWith('stock')) return _AssetType.stock;
+  if (c.startsWith('crypto')) return _AssetType.crypto;
+  if (c.startsWith('etf')) return _AssetType.etf;
+  if (c.contains('fund')) return _AssetType.fund;
+  return _AssetType.other;
+}
+
+const _typeColors = {
+  _AssetType.stock: Color(0xFF6366F1),
+  _AssetType.crypto: Color(0xFFF59E0B),
+  _AssetType.etf: Color(0xFF06B6D4),
+  _AssetType.fund: Color(0xFFEC4899),
+  _AssetType.other: Color(0xFF94A3B8),
+};
 
 class WealthPage extends StatefulWidget {
   const WealthPage({super.key});
@@ -42,10 +77,12 @@ class _WealthPageState extends State<WealthPage> {
     final prefs = await SharedPreferences.getInstance();
     final ids = prefs.getStringList('archived_goal_ids') ?? [];
     final celebrated = prefs.getStringList('celebrated_goal_ids') ?? [];
-    if (mounted) setState(() {
-      _archivedGoalIds = ids.toSet();
-      _celebratedGoalIds = celebrated.toSet();
-    });
+    if (mounted) {
+      setState(() {
+        _archivedGoalIds = ids.toSet();
+        _celebratedGoalIds = celebrated.toSet();
+      });
+    }
   }
 
   Future<void> _archiveGoal(String id) async {
@@ -60,668 +97,541 @@ class _WealthPageState extends State<WealthPage> {
     await prefs.setStringList('archived_goal_ids', _archivedGoalIds.toList());
   }
 
+  // ── Goal maths ────────────────────────────────────────────────────────────
+  double _goalValue(PortfolioModel goal, List<AssetModel> assets, CurrencyState cs) => assets
+      .where((a) => a.portfolioId == goal.id)
+      .fold(0.0, (s, a) => s + AssetMath.marketValue(a, cs));
+
+  /// Target in the user's currency (stored in USD); 0 = no target set.
+  double _goalTarget(PortfolioModel goal, CurrencyState cs) {
+    final t = goal.targetGoal ?? 0;
+    return t > 0 ? CurrencyFormatter.convert(t, cs, fromCurrency: 'USD') : 0;
+  }
+
+  void _checkCelebrations(List<PortfolioModel> activeGoals, List<AssetModel> assets, CurrencyState cs) {
+    for (final goal in activeGoals) {
+      final target = _goalTarget(goal, cs);
+      if (target <= 0 || _celebratedGoalIds.contains(goal.id)) continue;
+      if (_goalValue(goal, assets, cs) >= target) {
+        _celebratedGoalIds.add(goal.id);
+        SharedPreferences.getInstance()
+            .then((p) => p.setStringList('celebrated_goal_ids', _celebratedGoalIds.toList()));
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _showGoalCompletionSheet(context, goal);
+        });
+        break;
+      }
+    }
+  }
+
+  void _openInvest() => Navigator.push(context, MaterialPageRoute(builder: (_) => const InvestPage()));
+  void _openNewGoal() => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreatePortfolioPage()));
+
+  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
-    final mutedTextColor = Theme.of(context).textTheme.bodySmall?.color;
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final cs = context.watch<CurrencyCubit>().state;
+    final assetState = context.watch<AssetBloc>().state;
+    final goalState = context.watch<PortfolioBloc>().state;
+
+    final assets = assetState is AssetLoaded ? assetState.assets : <AssetModel>[];
+    final goals = goalState is PortfolioLoaded ? goalState.portfolios : <PortfolioModel>[];
+    final activeGoals = goals.where((g) => !_archivedGoalIds.contains(g.id)).toList();
+    final archivedGoals = goals.where((g) => _archivedGoalIds.contains(g.id)).toList();
+    final unassigned = assets.where((a) => a.portfolioId.isEmpty).toList();
+    final loading = assetState is AssetLoading || assetState is AssetInitial;
+
+    if (assetState is AssetLoaded) _checkCelebrations(activeGoals, assets, cs);
+
+    final isEmpty = !loading && assets.isEmpty && goals.isEmpty;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
-        child: BlocBuilder<CurrencyCubit, CurrencyState>(
-          builder: (context, currencyState) {
-            return ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-              children: [
-                _buildHeader(context, textColor),
-                const SizedBox(height: 32),
-                _buildNetWorthOverview(context, textColor, mutedTextColor, primaryColor, currencyState),
-                const SizedBox(height: 32),
-                _buildGoalsSection(context, textColor, mutedTextColor, currencyState),
-                const SizedBox(height: 32),
-                _buildAssetsSection(context, textColor, mutedTextColor, primaryColor, currencyState),
-                const SizedBox(height: 100),
-              ],
-            );
+        child: RefreshIndicator(
+          onRefresh: () async {
+            context.read<AssetBloc>().add(const LoadAssets());
+            context.read<PortfolioBloc>().add(const LoadPortfolios(''));
           },
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+            children: [
+              _header(context),
+              const SizedBox(height: 20),
+              if (loading && assets.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 60),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (isEmpty)
+                _emptyState(context)
+              else ...[
+                _portfolioCard(context, assets, cs),
+                const SizedBox(height: 14),
+                _actionButtons(context),
+                const SizedBox(height: 28),
+                _goalsSection(context, activeGoals, archivedGoals, assets, cs),
+                const SizedBox(height: 28),
+                _unassignedSection(context, unassigned),
+              ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context, Color? textColor) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final glassColor = isDarkMode 
-        ? const Color(0x99192134) 
-        : const Color(0xCCFFFFFF);
-
+  Widget _header(BuildContext context) {
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          AppLocalizations.of(context)!.wealth,
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.w900,
-            color: textColor,
+        Expanded(
+          child: Text(
+            AppLocalizations.of(context)!.wealth,
+            style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: textColor),
           ),
         ),
-        Row(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha:0.1),
-                  width: 1,
-                ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(30),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: glassColor,
-                    ),
-                    child: IconButton(
-                      icon: Icon(Icons.search, color: textColor),
-                      iconSize: 24,
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const InvestPage(),
-                          ),
-                        );
-                      },
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+        IconButton.filledTonal(
+          tooltip: AppLocalizations.of(context)!.investAction,
+          icon: const Icon(Icons.search),
+          onPressed: _openInvest,
         ),
       ],
     );
   }
 
-  Widget _buildNetWorthOverview(BuildContext context, Color? textColor, Color? mutedTextColor, Color primaryColor, CurrencyState currencyState) {
-    return BlocBuilder<AssetBloc, AssetState>(
-      builder: (context, state) {
-        double totalAssets = 0;
-        double totalCost = 0;
-        if (state is AssetLoaded) {
-          for (var asset in state.assets) {
-            String baseCurrency = asset.tickerSymbol.endsWith('.BK') ? 'THB' : 'USD';
-            double assetValue = CurrencyFormatter.convert(asset.totalQuantity * asset.currentPrice, currencyState, fromCurrency: baseCurrency);
-            double assetCost = CurrencyFormatter.convert(asset.totalQuantity * asset.averageBuyPrice, currencyState, fromCurrency: baseCurrency);
-            totalAssets += assetValue;
-            totalCost += assetCost;
-          }
-        }
-        
-        double pctChange = 0.0;
-        if (totalCost > 0) {
-            pctChange = ((totalAssets - totalCost) / totalCost) * 100;
-        }
-        
-        final isPositive = pctChange >= 0;
-        final sign = isPositive ? '+' : '';
-        final badgeColor = isPositive ? Colors.green : Colors.red;
-        final badgeIcon = isPositive ? Icons.trending_up : Icons.trending_down;
-        final badgeBgColor = isPositive ? Colors.greenAccent.withValues(alpha: 0.2) : Colors.redAccent.withValues(alpha: 0.2);
+  Widget _portfolioCard(BuildContext context, List<AssetModel> assets, CurrencyState cs) {
+    final l10n = AppLocalizations.of(context)!;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+    final muted = Theme.of(context).textTheme.bodySmall?.color;
+    String money(double v) => CurrencyFormatter.format(v, cs, fromCurrency: cs.selectedCurrency);
 
-        return GlassContainer(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    AppLocalizations.of(context)!.totalNetWorth,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: mutedTextColor),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: badgeBgColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(badgeIcon, color: badgeColor, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$sign${pctChange.toStringAsFixed(1)}%',
-                          style: TextStyle(color: badgeColor, fontWeight: FontWeight.bold, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                CurrencyFormatter.format(totalAssets, currencyState, fromCurrency: currencyState.selectedCurrency),
-                style: TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.w900,
-                  color: textColor,
-                  letterSpacing: -1,
-                ),
-              ),
-              const SizedBox(height: 24),
-Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(AppLocalizations.of(context)!.assets, style: TextStyle(color: mutedTextColor, fontSize: 13)),
-                        const SizedBox(height: 4),
-                        Text(CurrencyFormatter.format(totalAssets, currencyState, fromCurrency: currencyState.selectedCurrency), style: TextStyle(color: Colors.greenAccent.shade400, fontWeight: FontWeight.bold, fontSize: 18)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
+    double value = 0, cost = 0;
+    final byType = <_AssetType, double>{};
+    for (final a in assets) {
+      final v = AssetMath.marketValue(a, cs);
+      value += v;
+      cost += AssetMath.costBasis(a, cs);
+      byType[_typeOf(a)] = (byType[_typeOf(a)] ?? 0) + v;
+    }
+    final gain = value - cost;
+    final pct = cost > 0 ? gain / cost * 100 : null;
+    final up = gain >= 0;
+    final gainColor = up ? _green : _red;
+    final types = byType.entries.where((e) => e.value > 0).toList()..sort((a, b) => b.value.compareTo(a.value));
+
+    String typeName(_AssetType t) => switch (t) {
+          _AssetType.stock => l10n.assetTypeStock,
+          _AssetType.crypto => l10n.assetTypeCrypto,
+          _AssetType.etf => l10n.assetTypeEtf,
+          _AssetType.fund => l10n.assetTypeFund,
+          _AssetType.other => l10n.assetTypeOther,
+        };
+
+    return GlassContainer(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.totalPortfolioValue, style: TextStyle(color: muted, fontSize: 14, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 6),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(money(value),
+                style: TextStyle(color: textColor, fontSize: 34, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildGoalsSection(BuildContext context, Color? textColor, Color? mutedTextColor, CurrencyState currencyState) {
-    return BlocBuilder<PortfolioBloc, PortfolioState>(
-      builder: (context, state) {
-        List<dynamic> allGoals = [];
-        if (state is PortfolioLoaded) allGoals = state.portfolios;
-
-        final activeGoals = allGoals.where((g) => !_archivedGoalIds.contains(g.id)).toList();
-        final archivedGoals = allGoals.where((g) => _archivedGoalIds.contains(g.id)).toList();
-
-        // Detect newly completed goals and celebrate once per session
-        final assetState = context.read<AssetBloc>().state;
-        if (assetState is AssetLoaded) {
-          for (final goal in activeGoals) {
-            double currentAmount = 0.0;
-            for (var asset in assetState.assets) {
-              if (asset.portfolioId == goal.id) {
-                final base = asset.tickerSymbol.endsWith('.BK') ? 'THB' : 'USD';
-                currentAmount += CurrencyFormatter.convert(asset.totalQuantity * asset.currentPrice, currencyState, fromCurrency: base);
-              }
-            }
-            double target = (goal.targetGoal ?? 1.0) == 0 ? 1.0 : (goal.targetGoal ?? 1.0);
-            double convertedTarget = CurrencyFormatter.convert(target, currencyState, fromCurrency: 'USD');
-            if (currentAmount >= convertedTarget && !_celebratedGoalIds.contains(goal.id)) {
-              _celebratedGoalIds.add(goal.id);
-              SharedPreferences.getInstance().then((prefs) {
-                prefs.setStringList('celebrated_goal_ids', _celebratedGoalIds.toList());
-              });
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) _showGoalCompletionSheet(context, goal);
-              });
-              break;
-            }
-          }
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+          if (cost > 0) ...[
+            const SizedBox(height: 6),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  AppLocalizations.of(context)!.financialGoals,
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textColor),
+                Icon(up ? Icons.arrow_drop_up : Icons.arrow_drop_down, color: gainColor, size: 24),
+                Flexible(
+                  child: Text(
+                    '${money(gain.abs())}${pct != null ? ' (${up ? '+' : '−'}${pct.abs().toStringAsFixed(1)}%)' : ''}',
+                    style: TextStyle(color: gainColor, fontWeight: FontWeight.w800, fontSize: 14),
+                  ),
                 ),
-                TextButton(
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const CreatePortfolioPage())),
-                  child: Text(AppLocalizations.of(context)!.addGoal, style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
-                ),
+                const SizedBox(width: 6),
+                Text(up ? l10n.totalGainLabel : l10n.totalLossLabel, style: TextStyle(color: muted, fontSize: 13)),
               ],
             ),
-            const SizedBox(height: 12),
-            if (activeGoals.isEmpty && archivedGoals.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Center(child: Text(AppLocalizations.of(context)!.noGoalsYet, style: TextStyle(color: mutedTextColor))),
-              )
-            else if (activeGoals.isNotEmpty)
-              SizedBox(
-                height: 180,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: activeGoals.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 16),
-                  itemBuilder: (context, index) {
-                    final goal = activeGoals[index];
-                    return BlocBuilder<AssetBloc, AssetState>(
-                      builder: (context, assetState) {
-                        double currentAmount = 0.0;
-                        if (assetState is AssetLoaded) {
-                          for (var asset in assetState.assets) {
-                            if (asset.portfolioId == goal.id) {
-                              final base = asset.tickerSymbol.endsWith('.BK') ? 'THB' : 'USD';
-                              currentAmount += CurrencyFormatter.convert(asset.totalQuantity * asset.currentPrice, currencyState, fromCurrency: base);
-                            }
-                          }
-                        }
-                        double target = (goal.targetGoal ?? 1.0) == 0 ? 1.0 : (goal.targetGoal ?? 1.0);
-                        double convertedTarget = CurrencyFormatter.convert(target, currencyState, fromCurrency: 'USD');
-                        double progress = (currentAmount / convertedTarget).clamp(0.0, 1.0);
-                        return _buildGoalCard(context, goal, currentAmount, convertedTarget, progress, textColor, mutedTextColor, currencyState);
-                      },
-                    );
-                  },
-                ),
-              ),
-            // Completed / archived section
-            if (archivedGoals.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              GestureDetector(
-                onTap: () => setState(() => _completedExpanded = !_completedExpanded),
+          ],
+          if (types.isNotEmpty && value > 0) ...[
+            const SizedBox(height: 16),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: SizedBox(
+                height: 8,
                 child: Row(
                   children: [
-                    const Icon(Icons.check_circle_outline, color: Colors.green, size: 18),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Completed Goals (${archivedGoals.length})',
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.green),
-                    ),
-                    const Spacer(),
-                    Icon(_completedExpanded ? Icons.expand_less : Icons.expand_more, color: Colors.green),
+                    for (final e in types)
+                      Expanded(
+                        flex: (e.value / value * 1000).round().clamp(1, 1000),
+                        child: Container(color: _typeColors[e.key]),
+                      ),
                   ],
                 ),
               ),
-              if (_completedExpanded) ...[
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 160,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: archivedGoals.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 16),
-                    itemBuilder: (context, index) => _buildArchivedGoalCard(context, archivedGoals[index], textColor, mutedTextColor, currencyState),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 14,
+              runSpacing: 6,
+              children: [
+                for (final e in types)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(width: 8, height: 8, decoration: BoxDecoration(color: _typeColors[e.key], shape: BoxShape.circle)),
+                      const SizedBox(width: 6),
+                      Text('${typeName(e.key)} ${(e.value / value * 100).toStringAsFixed(0)}%',
+                          style: TextStyle(color: muted, fontSize: 12, fontWeight: FontWeight.w600)),
+                    ],
                   ),
-                ),
               ],
-            ],
+            ),
           ],
-        );
-      },
+          if (cost > 0) ...[
+            const SizedBox(height: 14),
+            Divider(height: 1, color: (textColor ?? Colors.grey).withValues(alpha: 0.1)),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Text(l10n.costBasisLabel, style: TextStyle(color: muted, fontSize: 13)),
+                const Spacer(),
+                Text(money(cost), style: TextStyle(color: textColor, fontWeight: FontWeight.w700, fontSize: 13)),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 
-
-  Widget _buildGoalCard(BuildContext context, dynamic goal, double currentAmount, double targetAmount, double progress, Color? textColor, Color? mutedTextColor, CurrencyState currencyState) {
-    final color = Theme.of(context).colorScheme.primary; 
-    // ignore: non_const_argument_for_const_parameter
-    final iconData = IconData(goal.icon as int, fontFamily: 'MaterialIcons');
-    
-    return GestureDetector(
-        onTap: () {
-          if (progress >= 1.0) {
-            _showGoalCompletionSheet(context, goal);
-          } else {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => CreatedPortfolio(
-              portfolio: goal,
-              currentAmount: currentAmount,
-            )));
-          }
-        },
-        onLongPress: () {
-          _showGoalOptions(context, goal);
-        },
-        child: SizedBox(
-        width: 240,
-        child: GlassContainer(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(iconData, color: color, size: 24),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    goal.name,
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: textColor),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+  Widget _actionButtons(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final primary = Theme.of(context).colorScheme.primary;
+    final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: _openInvest,
+            icon: const Icon(Icons.trending_up, size: 20),
+            label: Text(l10n.investAction),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primary,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: shape,
+              textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      CurrencyFormatter.format(currentAmount, currencyState, decimals: 0, fromCurrency: currencyState.selectedCurrency), // Already converted
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: textColor),
-                    ),
-                    Text(
-                      CurrencyFormatter.format(targetAmount, currencyState, decimals: 0, fromCurrency: currencyState.selectedCurrency),
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: mutedTextColor),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 8,
-                    backgroundColor: mutedTextColor?.withValues(alpha: 0.2),
-                    valueColor: AlwaysStoppedAnimation<Color>(color),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                progress >= 1.0
-                    ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text(
-                          'Completed ✓',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
-                          ),
-                        ),
-                      )
-                    : Text(
-                        AppLocalizations.of(context)!.percentCompleted((progress * 100).toStringAsFixed(1)),
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color),
-                      ),
-              ],
-            ),
-          ],
+          ),
         ),
-      ),
-    ));
+        const SizedBox(width: 12),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: _openNewGoal,
+            icon: const Icon(Icons.flag_outlined, size: 20),
+            label: Text(l10n.createGoal, maxLines: 1, overflow: TextOverflow.ellipsis),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: primary,
+              side: BorderSide(color: primary.withValues(alpha: 0.6)),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: shape,
+              textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
-  Widget _buildAssetsSection(BuildContext context, Color? textColor, Color? mutedTextColor, Color primaryColor, CurrencyState currencyState) {
+  Widget _sectionTitle(BuildContext context, String text, {Widget? trailing}) {
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Expanded(child: Text(text, style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: textColor))),
+          if (trailing != null) trailing,
+        ],
+      ),
+    );
+  }
+
+  Widget _goalsSection(BuildContext context, List<PortfolioModel> active, List<PortfolioModel> archived,
+      List<AssetModel> assets, CurrencyState cs) {
+    final l10n = AppLocalizations.of(context)!;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+    final muted = Theme.of(context).textTheme.bodySmall?.color;
+    final divider = Divider(height: 1, color: (textColor ?? Colors.grey).withValues(alpha: 0.08));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          AppLocalizations.of(context)!.unassignedAssets,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: textColor,
+        _sectionTitle(context, l10n.goalsCount('${active.length}')),
+        if (active.isEmpty)
+          GlassContainer(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: [
+                Icon(Icons.flag_outlined, color: muted),
+                const SizedBox(width: 12),
+                Expanded(child: Text(l10n.noGoalsYet, style: TextStyle(color: muted, fontSize: 14))),
+                TextButton(onPressed: _openNewGoal, child: Text(l10n.createGoal)),
+              ],
+            ),
+          )
+        else
+          GlassContainer(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Column(
+              children: [
+                for (int i = 0; i < active.length; i++) ...[
+                  if (i > 0) divider,
+                  _goalRow(context, active[i], assets, cs),
+                ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          AppLocalizations.of(context)!.longPressToAssign,
-          style: TextStyle(fontSize: 13, color: mutedTextColor),
-        ),
-        const SizedBox(height: 16),
-        BlocBuilder<AssetBloc, AssetState>(
-          builder: (context, state) {
-            if (state is AssetLoading) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (state is AssetLoaded) {
-              final orphanAssets = state.assets.where((a) => a.portfolioId.isEmpty).toList();
-              if (orphanAssets.isEmpty) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 40),
-                    child: Text(
-                      AppLocalizations.of(context)!.noUnassignedAssets,
-                      style: TextStyle(color: mutedTextColor, fontSize: 16),
-                    ),
+        if (archived.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () => setState(() => _completedExpanded = !_completedExpanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_outline, color: _green, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(l10n.completedGoalsCount('${archived.length}'),
+                        style: const TextStyle(color: _green, fontWeight: FontWeight.w700, fontSize: 14)),
                   ),
-                );
-              }
-              return ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: orphanAssets.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final asset = orphanAssets[index];
-                  return GestureDetector(
-                    onTap: () => _showAssetOptionsSheet(context, asset, primaryColor, textColor, mutedTextColor),
-                    child: GlassContainer(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: primaryColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Image.asset(
-                              'assets/icons/${asset.tickerSymbol}.png',
-                              width: 24,
-                              height: 24,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(Icons.account_balance_wallet, color: primaryColor, size: 24);
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  asset.tickerSymbol.isNotEmpty ? asset.tickerSymbol : 'Asset',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: textColor,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  AppLocalizations.of(context)!.sharesUnits(asset.totalQuantity.toString()),
-                                  style: TextStyle(fontSize: 13, color: mutedTextColor),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                CurrencyFormatter.format(
-                                  asset.totalQuantity * asset.currentPrice,
-                                  currencyState,
-                                  fromCurrency: asset.tickerSymbol.endsWith('.BK') ? 'THB' : 'USD'
-                                ),
-                                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: textColor),
-                              ),
-                              const SizedBox(height: 4),
-                              Icon(Icons.more_horiz, color: mutedTextColor, size: 18),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
-            }
-            return const SizedBox();
-          },
-        ),
+                  Icon(_completedExpanded ? Icons.expand_less : Icons.expand_more, color: _green),
+                ],
+              ),
+            ),
+          ),
+          if (_completedExpanded)
+            GlassContainer(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Column(
+                children: [
+                  for (int i = 0; i < archived.length; i++) ...[
+                    if (i > 0) divider,
+                    _archivedRow(context, archived[i], assets, cs),
+                  ],
+                ],
+              ),
+            ),
+        ],
       ],
     );
   }
 
-  void _showAssetOptionsSheet(BuildContext context, dynamic asset, Color primaryColor, Color? textColor, Color? mutedTextColor) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (sheetCtx) => GlassContainer(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(width: 40, height: 4,
-              decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 16),
-            Text(asset.name.isNotEmpty ? asset.name : asset.tickerSymbol,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
-            Text(asset.category, style: TextStyle(fontSize: 13, color: textColor?.withValues(alpha: 0.5))),
-            const SizedBox(height: 24),
-            // Assign to goal
-            _assetOptionTile(
-              color: primaryColor,
-              icon: Icons.flag_outlined,
-              title: 'Assign to a goal',
-              subtitle: 'Move this asset into one of your financial goals',
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                _showAssignToGoalSheet(context, asset);
-              },
-            ),
-            const SizedBox(height: 10),
-            // Delete permanently
-            _assetOptionTile(
-              color: Colors.redAccent,
-              icon: Icons.delete_outline,
-              title: 'Delete permanently',
-              subtitle: 'Removes this asset and all its data forever',
-              onTap: () {
-                context.read<AssetBloc>().add(DeleteAsset(asset.id));
-                Navigator.pop(sheetCtx);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _goalRow(BuildContext context, PortfolioModel goal, List<AssetModel> assets, CurrencyState cs) {
+    final l10n = AppLocalizations.of(context)!;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+    final muted = Theme.of(context).textTheme.bodySmall?.color;
+    final primary = Theme.of(context).colorScheme.primary;
+    String money(double v) => CurrencyFormatter.format(v, cs, decimals: 0, fromCurrency: cs.selectedCurrency);
 
-  Widget _assetOptionTile({required Color color, required IconData icon, required String title, required String subtitle, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
+    final value = _goalValue(goal, assets, cs);
+    final target = _goalTarget(goal, cs);
+    final progress = target > 0 ? (value / target).clamp(0.0, 1.0) : 0.0;
+    final done = target > 0 && progress >= 1.0;
+    // ignore: non_const_argument_for_const_parameter
+    final icon = IconData(goal.icon, fontFamily: 'MaterialIcons');
+
+    return InkWell(
+      onTap: () {
+        if (done) {
+          _showGoalCompletionSheet(context, goal);
+        } else {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => CreatedPortfolio(portfolio: goal, currentAmount: value)));
+        }
+      },
+      onLongPress: () => _showGoalOptions(context, goal),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 4, 14),
         child: Row(
           children: [
-            Icon(icon, color: color, size: 22),
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(color: primary.withValues(alpha: 0.15), shape: BoxShape.circle),
+              child: Icon(icon, color: primary, size: 22),
+            ),
             const SizedBox(width: 14),
             Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 15)),
-                Text(subtitle, style: TextStyle(color: color.withValues(alpha: 0.7), fontSize: 12, height: 1.4)),
-              ]),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showAssignToGoalSheet(BuildContext context, dynamic asset) {
-    final portfolioState = context.read<PortfolioBloc>().state;
-    final portfolios = portfolioState is PortfolioLoaded ? portfolioState.portfolios : [];
-    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => GlassContainer(
-        padding: const EdgeInsets.all(24),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(30),
-          topRight: Radius.circular(30),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(goal.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: textColor, fontWeight: FontWeight.w700, fontSize: 15)),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        target > 0 ? '${money(value)} / ${money(target)}' : money(value),
+                        style: TextStyle(color: muted, fontSize: 12.5, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (target > 0) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 6,
+                        backgroundColor: primary.withValues(alpha: 0.12),
+                        valueColor: AlwaysStoppedAnimation(done ? _green : primary),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      done ? '${l10n.completedBadge} ✓' : l10n.percentCompleted((progress * 100).toStringAsFixed(0)),
+                      style: TextStyle(color: done ? _green : primary, fontSize: 12, fontWeight: FontWeight.w700),
+                    ),
+                  ] else
+                    Text(l10n.noTargetSet, style: TextStyle(color: muted, fontSize: 12)),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Assign "${asset.tickerSymbol}" to Goal',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textColor),
+            IconButton(
+              icon: Icon(Icons.more_vert, color: muted, size: 20),
+              onPressed: () => _showGoalOptions(context, goal),
             ),
-            const SizedBox(height: 16),
-            if (portfolios.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Center(
-                  child: Text('No goals yet. Create a goal first.', style: TextStyle(color: Colors.white54)),
-                ),
-              )
-            else
-              ...portfolios.map((portfolio) {
-                final iconData = IconData(portfolio.icon as int, fontFamily: 'MaterialIcons');
-                return ListTile(
-                  leading: Icon(iconData, color: Theme.of(context).colorScheme.primary),
-                  title: Text(portfolio.name, style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
-                  onTap: () {
-                    final updated = asset.copyWith(portfolioId: portfolio.id);
-                    context.read<AssetBloc>().add(UpdateAsset(updated));
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('${asset.tickerSymbol} assigned to ${portfolio.name}')),
-                    );
-                  },
-                );
-              }),
-            const SizedBox(height: 16),
           ],
         ),
       ),
     );
   }
 
-  void _showGoalCompletionSheet(BuildContext context, dynamic goal) {
-    final iconData = IconData(goal.icon as int, fontFamily: 'MaterialIcons');
-    final primaryColor = Theme.of(context).colorScheme.primary;
+  Widget _archivedRow(BuildContext context, PortfolioModel goal, List<AssetModel> assets, CurrencyState cs) {
     final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+    final muted = Theme.of(context).textTheme.bodySmall?.color;
+    final value = _goalValue(goal, assets, cs);
+    return ListTile(
+      leading: const Icon(Icons.check_circle, color: _green),
+      title: Text(goal.name, style: TextStyle(color: textColor, fontWeight: FontWeight.w700)),
+      subtitle: Text(CurrencyFormatter.format(value, cs, decimals: 0, fromCurrency: cs.selectedCurrency),
+          style: TextStyle(color: muted)),
+      trailing: IconButton(
+        icon: Icon(Icons.more_vert, color: muted, size: 20),
+        onPressed: () => _showGoalOptions(context, goal, archived: true),
+      ),
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CreatedPortfolio(portfolio: goal, currentAmount: value))),
+    );
+  }
+
+  Widget _unassignedSection(BuildContext context, List<AssetModel> unassigned) {
+    final l10n = AppLocalizations.of(context)!;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+    final muted = Theme.of(context).textTheme.bodySmall?.color;
+    final primary = Theme.of(context).colorScheme.primary;
+    final divider = Divider(height: 1, color: (textColor ?? Colors.grey).withValues(alpha: 0.08));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionTitle(context, '${l10n.unassignedAssets} (${unassigned.length})'),
+        if (unassigned.isEmpty)
+          GlassContainer(
+            padding: const EdgeInsets.all(18),
+            child: Text(l10n.noUnassignedAssets, style: TextStyle(color: muted, fontSize: 14)),
+          )
+        else ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(l10n.tapAssetForActions, style: TextStyle(color: muted, fontSize: 12.5)),
+          ),
+          GlassContainer(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Column(
+              children: [
+                for (int i = 0; i < unassigned.length; i++) ...[
+                  if (i > 0) divider,
+                  InkWell(
+                    onTap: () => showAssetActionsSheet(context, unassigned[i]),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 6, 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(color: primary.withValues(alpha: 0.15), shape: BoxShape.circle),
+                            child: Text(
+                              (unassigned[i].tickerSymbol.isNotEmpty ? unassigned[i].tickerSymbol : unassigned[i].name)
+                                  .substring(0, 1)
+                                  .toUpperCase(),
+                              style: TextStyle(color: primary, fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          AssetPickDetails(asset: unassigned[i], textColor: textColor),
+                          Icon(Icons.chevron_right, color: muted),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _emptyState(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+    final muted = Theme.of(context).textTheme.bodySmall?.color;
+    final primary = Theme.of(context).colorScheme.primary;
+    return GlassContainer(
+      padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+      child: Column(
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(color: primary.withValues(alpha: 0.15), shape: BoxShape.circle),
+            child: Icon(Icons.savings_outlined, color: primary, size: 36),
+          ),
+          const SizedBox(height: 16),
+          Text(l10n.wealthEmptyTitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          Text(l10n.wealthEmptyBody,
+              textAlign: TextAlign.center, style: TextStyle(color: muted, fontSize: 14, height: 1.5)),
+          const SizedBox(height: 20),
+          _actionButtons(context),
+        ],
+      ),
+    );
+  }
+
+  // ── Sheets & dialogs ──────────────────────────────────────────────────────
+  void _showGoalCompletionSheet(BuildContext context, PortfolioModel goal) {
+    final l10n = AppLocalizations.of(context)!;
+    final primary = Theme.of(context).colorScheme.primary;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+    // ignore: non_const_argument_for_const_parameter
+    final icon = IconData(goal.icon, fontFamily: 'MaterialIcons');
 
     showModalBottomSheet(
       context: context,
@@ -729,29 +639,26 @@ Row(
       isDismissible: false,
       builder: (ctx) => GlassContainer(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 40, height: 4,
-              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 20),
-            const Text('Goal Achieved!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.green)),
+            const Text('🎉', style: TextStyle(fontSize: 40)),
+            const SizedBox(height: 8),
+            Text(l10n.goalAchievedTitle, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _green)),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(iconData, color: primaryColor, size: 20),
+                Icon(icon, color: primary, size: 20),
                 const SizedBox(width: 8),
-                Text(goal.name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor)),
+                Flexible(child: Text(goal.name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor))),
               ],
             ),
             const SizedBox(height: 8),
-            Text(
-              "You've reached 100% of your goal!\nWhat would you like to do next?",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: textColor?.withValues(alpha: 0.7), height: 1.5),
-            ),
+            Text(l10n.goalAchievedBody,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: textColor?.withValues(alpha: 0.7), height: 1.5)),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -761,36 +668,36 @@ Row(
                   Navigator.pop(ctx);
                 },
                 icon: const Icon(Icons.archive_outlined),
-                label: const Text('Archive this goal', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                label: Text(l10n.archiveGoal, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: _green,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: () {
-                  context.read<PortfolioBloc>().add(DeletePortfolio(goal.id));
                   Navigator.pop(ctx);
+                  _confirmDeleteGoal(context, goal);
                 },
-                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                label: const Text('Delete goal', style: TextStyle(color: Colors.redAccent, fontSize: 16, fontWeight: FontWeight.bold)),
+                icon: const Icon(Icons.delete_outline, color: _red),
+                label: Text(l10n.deleteGoal, style: const TextStyle(color: _red, fontSize: 15, fontWeight: FontWeight.bold)),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.redAccent),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  side: const BorderSide(color: _red),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Keep active', style: TextStyle(color: textColor?.withValues(alpha: 0.5), fontSize: 14)),
+              child: Text(l10n.keepActive, style: TextStyle(color: textColor?.withValues(alpha: 0.6))),
             ),
           ],
         ),
@@ -798,125 +705,91 @@ Row(
     );
   }
 
-  Widget _buildArchivedGoalCard(BuildContext context, dynamic goal, Color? textColor, Color? mutedTextColor, CurrencyState currencyState) {
-    const color = Colors.green;
-    final iconData = IconData(goal.icon as int, fontFamily: 'MaterialIcons');
-    return SizedBox(
-      width: 200,
-      child: GlassContainer(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
-                  child: Icon(iconData, color: color, size: 20),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(goal.name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textColor), maxLines: 2, overflow: TextOverflow.ellipsis),
-                ),
-              ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: const LinearProgressIndicator(value: 1.0, minHeight: 6, backgroundColor: Color(0x26388E3C), valueColor: AlwaysStoppedAnimation<Color>(color)),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
-                  child: const Text('Completed ✓', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green)),
-                ),
-                const SizedBox(height: 4),
-                TextButton.icon(
-                  onPressed: () => context.read<PortfolioBloc>().add(DeletePortfolio(goal.id)),
-                  icon: const Icon(Icons.delete_outline, size: 14, color: Colors.redAccent),
-                  label: const Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 12)),
-                  style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  void _showGoalOptions(BuildContext context, PortfolioModel goal, {bool archived = false}) {
+    final l10n = AppLocalizations.of(context)!;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+    final primary = Theme.of(context).colorScheme.primary;
 
-    void _showGoalOptions(BuildContext context, dynamic goal) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => GlassContainer(
-        padding: const EdgeInsets.all(24),
-        borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 24),
-            ListTile(
-              leading: const Icon(Icons.edit, color: Colors.blue),
-              title: Text('Update Goal', style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontWeight: FontWeight.bold)),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (context) => CreatePortfolioPage(existingPortfolio: goal)));
-              },
-            ),
-            const Divider(color: Colors.white24),
-            ListTile(
-              leading: const Icon(Icons.archive_outlined, color: Colors.green),
-              title: Text('Archive Goal', style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontWeight: FontWeight.bold)),
-              subtitle: Text('Move to completed section', style: TextStyle(color: Colors.white38, fontSize: 12)),
-              onTap: () {
-                _archiveGoal(goal.id);
-                Navigator.pop(context);
-              },
-            ),
-            const Divider(color: Colors.white24),
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: Text('Delete Goal', style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontWeight: FontWeight.bold)),
-              onTap: () {
-                Navigator.pop(context);
-                _showDeleteConfirmation(context, goal);
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
+      builder: (ctx) => GlassContainer(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+              ),
+              const SizedBox(height: 12),
+              Text(goal.name, style: TextStyle(color: textColor, fontSize: 17, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: Icon(Icons.edit_outlined, color: primary),
+                title: Text(l10n.updateGoal, style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => CreatePortfolioPage(existingPortfolio: goal)));
+                },
+              ),
+              if (archived)
+                ListTile(
+                  leading: Icon(Icons.unarchive_outlined, color: primary),
+                  title: Text(l10n.restoreGoal, style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _unarchiveGoal(goal.id);
+                  },
+                )
+              else
+                ListTile(
+                  leading: const Icon(Icons.archive_outlined, color: _green),
+                  title: Text(l10n.archiveGoal, style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _archiveGoal(goal.id);
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: _red),
+                title: Text(l10n.deleteGoal, style: const TextStyle(color: _red, fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _confirmDeleteGoal(context, goal);
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, dynamic goal) {
-    showDialog(
+  Future<void> _confirmDeleteGoal(BuildContext context, PortfolioModel goal) async {
+    final l10n = AppLocalizations.of(context)!;
+    final ok = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E2C),
-        title: const Text('Delete Goal', style: TextStyle(color: Colors.white)),
-        content: const Text('Are you sure you want to delete this goal? Assets will remain orphaned.', style: TextStyle(color: Colors.white70)),
+      builder: (dCtx) => AlertDialog(
+        title: Text(l10n.deleteGoal),
+        content: Text(l10n.deleteGoalConfirm),
         actions: [
+          TextButton(onPressed: () => Navigator.pop(dCtx, false), child: Text(l10n.cancel)),
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
-          ),
-          TextButton(
-            onPressed: () {
-              context.read<PortfolioBloc>().add(DeletePortfolio(goal.id));
-              Navigator.pop(context);
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            onPressed: () => Navigator.pop(dCtx, true),
+            child: Text(l10n.deleteAction, style: const TextStyle(color: _red, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
+    if (ok == true && mounted) {
+      // ignore: use_build_context_synchronously
+      deleteGoalAndRefresh(context, goal.id);
+      _archivedGoalIds.remove(goal.id);
+    }
   }
 }

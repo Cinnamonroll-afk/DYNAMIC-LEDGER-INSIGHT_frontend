@@ -43,12 +43,15 @@ class CurrencyCubit extends Cubit<CurrencyState> {
     final savedCurrency = prefs.getString('selected_currency') ?? 'USD';
     final savedRate = prefs.getDouble('cached_usd_to_thb_rate');
 
+    if (isClosed) return;
+
     emit(state.copyWith(
       selectedCurrency: savedCurrency,
       usdToThbRate: savedRate, // Will use 35.0 if null because copyWith handles it? No, if savedRate is null we should keep current.
     ));
     
     if (savedRate != null) {
+      if (isClosed) return;
       emit(state.copyWith(usdToThbRate: savedRate));
     }
 
@@ -56,6 +59,7 @@ class CurrencyCubit extends Cubit<CurrencyState> {
   }
 
   Future<void> _fetchLiveRate() async {
+    if (isClosed) return;
     emit(state.copyWith(isLoadingRate: true));
     try {
       final response = await http.get(Uri.parse('https://api.exchangerate-api.com/v4/latest/USD'));
@@ -67,12 +71,16 @@ class CurrencyCubit extends Cubit<CurrencyState> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setDouble('cached_usd_to_thb_rate', thbRate);
 
+        if (isClosed) return;
+
         emit(state.copyWith(usdToThbRate: thbRate, isLoadingRate: false));
       } else {
+        if (isClosed) return;
         emit(state.copyWith(isLoadingRate: false));
       }
     } catch (e) {
       // Fall back to cached or default
+      if (isClosed) return;
       emit(state.copyWith(isLoadingRate: false));
     }
   }
