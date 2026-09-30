@@ -33,6 +33,8 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
   String? _targetError; // target amount is required (Feedback #4)
   IconData _selectedIcon = Icons.monetization_on;
   List<AssetModel> _selectedAssets = [];
+  /// Partial quantity chosen per selected asset (absent = the whole holding).
+  final Map<String, double> _moveQty = {};
   Set<String> _originalAssetIds = {}; // edit mode: assets already in the goal
   bool _isSaving = false;
 
@@ -80,6 +82,27 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
     }).toList();
   }
 
+  /// A selected asset as it will be in the goal (only the chosen quantity).
+  AssetModel _inGoal(AssetModel a) {
+    final q = _moveQty[a.id];
+    return (q != null && q < a.totalQuantity - 1e-9) ? a.copyWith(totalQuantity: q) : a;
+  }
+
+  /// Moves the selected assets into the goal — partially where a quantity
+  /// was chosen, whole otherwise.
+  void _assign(AssetBloc bloc, List<AssetModel> assets, String goalId) {
+    final full = <AssetModel>[];
+    for (final a in assets) {
+      final q = _moveQty[a.id];
+      if (q != null && q < a.totalQuantity - 1e-9) {
+        moveQuantityToGoal(bloc, a, q, goalId);
+      } else {
+        full.add(a);
+      }
+    }
+    if (full.isNotEmpty) moveAssetsToGoal(bloc, full, goalId);
+  }
+
   Future<void> _createGoalAndAssignAssets() async {
     final l10n = AppLocalizations.of(context)!;
     if (_nameController.text.trim().isEmpty) {
@@ -117,7 +140,7 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
             ? st.assets.where((a) => _originalAssetIds.contains(a.id) && !keptIds.contains(a.id)).toList()
             : <AssetModel>[];
         if (removed.isNotEmpty) moveAssetsToGoal(assetBloc, removed, '');
-        moveAssetsToGoal(assetBloc, toAssign, goal.id);
+        _assign(assetBloc, toAssign, goal.id);
         if (mounted) Navigator.pop(context, goal); // back to where edit was opened
         return;
       } else {
@@ -125,7 +148,7 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
         final newId = await PortfolioRepository().addPortfolio(goal);
         if (!mounted) return;
         context.read<PortfolioBloc>().add(const LoadPortfolios(''));
-        moveAssetsToGoal(assetBloc, toAssign, newId);
+        _assign(assetBloc, toAssign, newId);
         final createdPortfolio = PortfolioModel(
           id: newId,
           userId: goal.userId,
@@ -196,6 +219,9 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
 
     // temp selection state inside sheet
     final tempSelected = List<AssetModel>.from(_selectedAssets);
+    final qtyCtrls = <String, TextEditingController>{};
+    TextEditingController ctrlFor(AssetModel a) => qtyCtrls.putIfAbsent(
+        a.id, () => TextEditingController(text: AssetMath.formatQuantity(_moveQty[a.id] ?? a.totalQuantity)));
 
     showModalBottomSheet(
       context: context,
@@ -203,9 +229,10 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
       isScrollControlled: true,
       builder: (sheetCtx) {
         return StatefulBuilder(builder: (ctx, setSheetState) {
+          final invalid = PickQuantityField.anyInvalid(tempSelected, qtyCtrls);
           return GlassContainer(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+            padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(ctx).viewInsets.bottom + 32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -234,7 +261,8 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
                     itemBuilder: (_, i) {
                       final asset = orphans[i];
                       final isSelected = tempSelected.any((a) => a.id == asset.id);
-                      return GestureDetector(
+                      return Column(mainAxisSize: MainAxisSize.min, children: [
+                      GestureDetector(
                         onTap: () {
                           setSheetState(() {
                             if (isSelected) {
@@ -285,7 +313,14 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
                             ],
                           ),
                         ),
-                      );
+                      ),
+                      if (isSelected)
+                        PickQuantityField(
+                          controller: ctrlFor(asset),
+                          held: asset.totalQuantity,
+                          onChanged: () => setSheetState(() {}),
+                        ),
+                      ]);
                     },
                   ),
                 ),
@@ -299,8 +334,21 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
-                    onPressed: () {
-                      setState(() => _selectedAssets = List.from(tempSelected));
+                    onPressed: invalid ? null : () {
+                      setState(() {
+                        _selectedAssets = List.from(tempSelected);
+                        _moveQty.removeWhere((id, _) => !tempSelected.any((a) => a.id == id));
+                        for (final a in tempSelected) {
+                          final c = qtyCtrls[a.id];
+                          if (c == null) continue;
+                          final q = PickQuantityField.parse(c, a.totalQuantity);
+                          if (q != null && q < a.totalQuantity - 1e-9) {
+                            _moveQty[a.id] = q;
+                          } else {
+                            _moveQty.remove(a.id);
+                          }
+                        }
+                      });
                       Navigator.pop(sheetCtx);
                     },
                     child: Text(
@@ -351,7 +399,7 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
     final unassignedCount = allAssets
         .where((a) => a.portfolioId.isEmpty && !selected.any((s) => s.id == a.id))
         .length;
-    final selectedTotal = selected.fold<double>(0, (s, a) => s + AssetMath.marketValue(a, cs));
+    final selectedTotal = selected.fold<double>(0, (s, a) => s + AssetMath.marketValue(_inGoal(a), cs));
     final target = _parsedTarget;
     final progress = target > 0 ? (selectedTotal / target).clamp(0.0, 1.0) : 0.0;
 
@@ -531,12 +579,15 @@ class _CreatePortfolioPageState extends State<CreatePortfolioPage> {
                                       ),
                                     ),
                                     const SizedBox(width: 12),
-                                    AssetPickDetails(asset: a, textColor: textColor),
+                                    AssetPickDetails(asset: _inGoal(a), textColor: textColor),
                                     IconButton(
                                       tooltip: l10n.removeFromGoal,
                                       visualDensity: VisualDensity.compact,
                                       icon: Icon(Icons.close, size: 18, color: mutedTextColor),
-                                      onPressed: () => setState(() => _selectedAssets.removeWhere((x) => x.id == a.id)),
+                                      onPressed: () => setState(() {
+                                        _selectedAssets.removeWhere((x) => x.id == a.id);
+                                        _moveQty.remove(a.id);
+                                      }),
                                     ),
                                   ],
                                 ),

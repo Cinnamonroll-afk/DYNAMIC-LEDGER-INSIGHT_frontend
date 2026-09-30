@@ -104,4 +104,36 @@ class AssetMath {
     }
     return (updates: updated.values.toList(), deletes: deletes);
   }
+
+  /// Plans moving only [quantity] units of [asset] into [targetPortfolioId]
+  /// ('' = Unassigned). Moving everything behaves exactly like [planMove].
+  /// Otherwise the source keeps the rest and the moved part keeps the same
+  /// average buy price — merged into a same-ticker holding at the target,
+  /// or created as a new holding there.
+  static ({List<AssetModel> updates, List<String> deletes, List<AssetModel> adds}) planPartialMove(
+    List<AssetModel> all,
+    AssetModel asset,
+    double quantity,
+    String targetPortfolioId,
+  ) {
+    if (asset.portfolioId == targetPortfolioId || quantity <= 0) {
+      return (updates: const <AssetModel>[], deletes: const <String>[], adds: const <AssetModel>[]);
+    }
+    if (quantity >= asset.totalQuantity - 1e-9) {
+      final p = planMove(all, [asset], targetPortfolioId);
+      return (updates: p.updates, deletes: p.deletes, adds: const <AssetModel>[]);
+    }
+    final source = asset.copyWith(totalQuantity: asset.totalQuantity - quantity);
+    final same = findSameHolding(
+      all.where((a) => a.id != asset.id).toList(),
+      asset.tickerSymbol,
+      targetPortfolioId,
+    );
+    if (same != null) {
+      final merged = mergeBuy(same, quantity: quantity, buyPrice: asset.averageBuyPrice);
+      return (updates: [source, merged], deletes: const <String>[], adds: const <AssetModel>[]);
+    }
+    final part = asset.copyWith(id: '', portfolioId: targetPortfolioId, totalQuantity: quantity);
+    return (updates: [source], deletes: const <String>[], adds: [part]);
+  }
 }

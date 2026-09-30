@@ -1837,6 +1837,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'e.g. Lunch, Salary...'**
   String get noteLunchSalary;
+
+  /// No description provided for @holdingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All holdings'**
+  String get holdingsTitle;
+
+  /// No description provided for @viewAllHoldings.
+  ///
+  /// In en, this message translates to:
+  /// **'View all holdings'**
+  String get viewAllHoldings;
+
+  /// No description provided for @holdingsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Same ticker is combined across all goals. Tap a location to buy more, sell, move or delete.'**
+  String get holdingsHint;
+
+  /// No description provided for @holdingsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No holdings yet'**
+  String get holdingsEmpty;
+
+  /// No description provided for @holdingsUnassigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Unassigned'**
+  String get holdingsUnassigned;
+
+  /// No description provided for @moveQuantityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity to move'**
+  String get moveQuantityLabel;
+
+  /// No description provided for @moveAllButton.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get moveAllButton;
+
+  /// No description provided for @moveToLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to'**
+  String get moveToLabel;
+
+  /// No description provided for @moveStaysLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Stays here'**
+  String get moveStaysLabel;
 }
 
 class _AppLocalizationsDelegate

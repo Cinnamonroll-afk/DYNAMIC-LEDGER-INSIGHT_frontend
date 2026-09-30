@@ -316,5 +316,14 @@
   "symbolLabel": "สัญลักษณ์",
   "dateLabel": "วันที่",
   "pleaseFillAllFields": "กรุณากรอกข้อมูลให้ครบถ้วน",
-  "noteLunchSalary": "เช่น มื้อกลางวัน, เงินเดือน..."
+  "noteLunchSalary": "เช่น มื้อกลางวัน, เงินเดือน...",
+  "holdingsTitle": "สินทรัพย์ทั้งหมด",
+  "viewAllHoldings": "ดูสินทรัพย์ทั้งหมด",
+  "holdingsHint": "หุ้นตัวเดียวกันรวมเป็นแถวเดียวจากทุกเป้าหมาย แตะที่ตำแหน่งเพื่อซื้อเพิ่ม/ขาย/ย้าย/ลบ",
+  "holdingsEmpty": "ยังไม่มีสินทรัพย์",
+  "holdingsUnassigned": "ยังไม่ได้จัดกลุ่ม",
+  "moveQuantityLabel": "จำนวนที่จะย้าย",
+  "moveAllButton": "ทั้งหมด",
+  "moveToLabel": "ย้ายไปที่",
+  "moveStaysLabel": "เหลือที่เดิม"
 }

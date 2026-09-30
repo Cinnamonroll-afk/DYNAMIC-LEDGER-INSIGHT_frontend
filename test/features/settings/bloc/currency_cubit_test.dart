@@ -10,7 +10,7 @@ void main() {
   });
 
   // ── CurrencyState unit tests (pure, no async) ──────────────────────────────
-
+// These tests do not require a Cubit instance, just the CurrencyState class.
   group('CurrencyState — symbol getter', () {
     test('symbol is dollar sign for USD', () {
       final state = CurrencyState(selectedCurrency: 'USD', usdToThbRate: 35.0);

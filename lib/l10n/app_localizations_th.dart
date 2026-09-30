@@ -921,4 +921,32 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get noteLunchSalary => 'เช่น มื้อกลางวัน, เงินเดือน...';
+
+  @override
+  String get holdingsTitle => 'สินทรัพย์ทั้งหมด';
+
+  @override
+  String get viewAllHoldings => 'ดูสินทรัพย์ทั้งหมด';
+
+  @override
+  String get holdingsHint =>
+      'หุ้นตัวเดียวกันรวมเป็นแถวเดียวจากทุกเป้าหมาย แตะที่ตำแหน่งเพื่อซื้อเพิ่ม/ขาย/ย้าย/ลบ';
+
+  @override
+  String get holdingsEmpty => 'ยังไม่มีสินทรัพย์';
+
+  @override
+  String get holdingsUnassigned => 'ยังไม่ได้จัดกลุ่ม';
+
+  @override
+  String get moveQuantityLabel => 'จำนวนที่จะย้าย';
+
+  @override
+  String get moveAllButton => 'ทั้งหมด';
+
+  @override
+  String get moveToLabel => 'ย้ายไปที่';
+
+  @override
+  String get moveStaysLabel => 'เหลือที่เดิม';
 }

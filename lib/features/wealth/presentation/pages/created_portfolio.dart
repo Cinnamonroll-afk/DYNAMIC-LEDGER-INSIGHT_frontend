@@ -160,6 +160,9 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
     }
 
     final tempSelected = <AssetModel>[];
+    final qtyCtrls = <String, TextEditingController>{};
+    TextEditingController ctrlFor(AssetModel a) =>
+        qtyCtrls.putIfAbsent(a.id, () => TextEditingController(text: AssetMath.formatQuantity(a.totalQuantity)));
 
     showModalBottomSheet(
       context: context,
@@ -168,7 +171,7 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
       builder: (sheetCtx) => StatefulBuilder(
         builder: (sheetCtx, setSheetState) => GlassContainer(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(sheetCtx).viewInsets.bottom + 32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -187,7 +190,8 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                   itemBuilder: (_, i) {
                     final asset = unassigned[i];
                     final isSelected = tempSelected.any((a) => a.id == asset.id);
-                    return GestureDetector(
+                    return Column(mainAxisSize: MainAxisSize.min, children: [
+                    GestureDetector(
                       onTap: () {
                         setSheetState(() {
                           if (isSelected) {
@@ -230,7 +234,14 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
                           ),
                         ]),
                       ),
-                    );
+                    ),
+                    if (isSelected)
+                      PickQuantityField(
+                        controller: ctrlFor(asset),
+                        held: asset.totalQuantity,
+                        onChanged: () => setSheetState(() {}),
+                      ),
+                    ]);
                   },
                 ),
               ),
@@ -238,8 +249,20 @@ class _CreatedPortfolioState extends State<CreatedPortfolio> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: tempSelected.isEmpty ? null : () {
-                    moveAssetsToGoal(context.read<AssetBloc>(), tempSelected, widget.portfolio!.id);
+                  onPressed: tempSelected.isEmpty || PickQuantityField.anyInvalid(tempSelected, qtyCtrls) ? null : () {
+                    final bloc = context.read<AssetBloc>();
+                    final goalId = widget.portfolio!.id;
+                    final full = <AssetModel>[];
+                    for (final a in tempSelected) {
+                      final c = qtyCtrls[a.id];
+                      final q = c == null ? null : PickQuantityField.parse(c, a.totalQuantity);
+                      if (q != null && q < a.totalQuantity - 1e-9) {
+                        moveQuantityToGoal(bloc, a, q, goalId);
+                      } else {
+                        full.add(a);
+                      }
+                    }
+                    if (full.isNotEmpty) moveAssetsToGoal(bloc, full, goalId);
                     Navigator.pop(sheetCtx);
                   },
                   style: ElevatedButton.styleFrom(

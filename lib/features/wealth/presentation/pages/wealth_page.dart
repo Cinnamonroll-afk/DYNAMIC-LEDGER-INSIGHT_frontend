@@ -20,6 +20,7 @@ import 'package:fincontrol/features/wealth/logic/asset_math.dart';
 import 'package:fincontrol/features/wealth/presentation/pages/create_new_portfolio.dart';
 import 'package:fincontrol/features/wealth/presentation/pages/invest_page.dart';
 import 'package:fincontrol/features/wealth/presentation/pages/created_portfolio.dart';
+import 'package:fincontrol/features/wealth/presentation/pages/holdings_page.dart';
 import 'package:fincontrol/features/wealth/presentation/widgets/goal_actions.dart';
 import 'package:fincontrol/features/wealth/presentation/widgets/asset_actions_sheet.dart';
 import 'package:fincontrol/features/wealth/presentation/widgets/asset_pick_details.dart';
@@ -302,6 +303,30 @@ class _WealthPageState extends State<WealthPage> {
                 const Spacer(),
                 Text(money(cost), style: TextStyle(color: textColor, fontWeight: FontWeight.w700, fontSize: 13)),
               ],
+            ),
+          ],
+          if (assets.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HoldingsPage())),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.list_alt, size: 18, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        '${l10n.viewAllHoldings} (${HoldingGroup.build(assets, cs).length})',
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700, fontSize: 13.5),
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, size: 20, color: Theme.of(context).colorScheme.primary),
+                  ],
+                ),
+              ),
             ),
           ],
         ],
@@ -790,6 +815,10 @@ class _WealthPageState extends State<WealthPage> {
       // ignore: use_build_context_synchronously
       deleteGoalAndRefresh(context, goal.id);
       _archivedGoalIds.remove(goal.id);
+      // The goal-completed sheet can pop up over that goal's own page; after
+      // deleting, close any page left open on top so we land back on Wealth.
+      // ignore: use_build_context_synchronously
+      Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 }

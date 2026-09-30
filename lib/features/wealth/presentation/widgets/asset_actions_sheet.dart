@@ -140,7 +140,7 @@ void showAssetActionsSheet(BuildContext context, AssetModel asset) {
               if (inGoal)
                 tile(Icons.link_off, Colors.blueGrey, l10n.removeFromGoal, l10n.removeFromGoalSubtitle, () {
                   Navigator.pop(sheetCtx);
-                  moveAssetsToGoal(context.read<AssetBloc>(), [asset], '');
+                  _showGoalPicker(context, asset);
                 })
               else
                 tile(Icons.flag_outlined, primary, l10n.assignToGoalAction, l10n.assignToGoalSubtitle, () {
@@ -180,52 +180,137 @@ Future<void> _confirmDelete(BuildContext context, AssetModel asset) async {
 }
 
 void _showGoalPicker(BuildContext context, AssetModel asset) {
-  final l10n = AppLocalizations.of(context)!;
-  final st = context.read<PortfolioBloc>().state;
-  final goals = st is PortfolioLoaded ? st.portfolios : const <PortfolioModel>[];
-  final textColor = Theme.of(context).textTheme.bodyLarge?.color;
-  final primary = Theme.of(context).colorScheme.primary;
-  final bloc = context.read<AssetBloc>();
-
   showModalBottomSheet(
     context: context,
+    isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (ctx) => GlassContainer(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(l10n.assignToGoalAction, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: textColor)),
-          const SizedBox(height: 8),
-          if (goals.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Text(l10n.noGoalsYet, style: TextStyle(color: textColor?.withValues(alpha: 0.6))),
-            )
-          else
-            ...goals.map((g) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(IconData(g.icon, fontFamily: 'MaterialIcons'), color: primary),
-                  title: Text(g.name, style: TextStyle(color: textColor, fontWeight: FontWeight.w700)),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    moveAssetsToGoal(bloc, [asset], g.id);
-                  },
-                )),
-        ],
-      ),
-    ),
+    builder: (_) => _MoveSheet(asset: asset),
   );
+}
+
+/// Move a holding — all of it (default) or only part of it — to a goal,
+/// another goal, or back to Unassigned.
+class _MoveSheet extends StatefulWidget {
+  final AssetModel asset;
+  const _MoveSheet({required this.asset});
+
+  @override
+  State<_MoveSheet> createState() => _MoveSheetState();
+}
+
+class _MoveSheetState extends State<_MoveSheet> {
+  late final TextEditingController _qtyController =
+      TextEditingController(text: AssetMath.formatQuantity(widget.asset.totalQuantity));
+
+  @override
+  void dispose() {
+    _qtyController.dispose();
+    super.dispose();
+  }
+
+  double get _qty => double.tryParse(_qtyController.text.replaceAll(',', '').trim()) ?? 0;
+  double get _held => widget.asset.totalQuantity;
+  bool get _valid => _qty > 0 && _qty <= _held + 1e-9;
+
+  void _moveTo(String targetPortfolioId) {
+    if (!_valid) return;
+    moveQuantityToGoal(context.read<AssetBloc>(), widget.asset, _qty, targetPortfolioId);
+    Navigator.pop(context, true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyLarge?.color;
+    final muted = theme.textTheme.bodySmall?.color;
+    final primary = theme.colorScheme.primary;
+    final isDark = theme.brightness == Brightness.dark;
+    final fieldBg = isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.04);
+    final a = widget.asset;
+    final inGoal = a.portfolioId.isNotEmpty;
+    final st = context.watch<PortfolioBloc>().state;
+    final goals = (st is PortfolioLoaded ? st.portfolios : const <PortfolioModel>[])
+        .where((g) => g.id != a.portfolioId)
+        .toList();
+    final tooMuch = _qty > _held + 1e-9;
+    final partial = _valid && (_held - _qty) > 1e-9;
+
+    Widget destination(IconData icon, String name, String targetId) => ListTile(
+          contentPadding: EdgeInsets.zero,
+          enabled: _valid,
+          leading: Icon(icon, color: _valid ? primary : muted),
+          title: Text(name, style: TextStyle(color: _valid ? textColor : muted, fontWeight: FontWeight.w700)),
+          trailing: Icon(Icons.chevron_right, color: muted),
+          onTap: () => _moveTo(targetId),
+        );
+
+    return GlassContainer(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+      padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('${inGoal ? l10n.removeFromGoal : l10n.assignToGoalAction} · ${a.tickerSymbol.toUpperCase()}',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: textColor)),
+            const SizedBox(height: 4),
+            Text(l10n.youHoldUnits(AssetMath.formatQuantity(_held)), style: TextStyle(color: muted, fontSize: 13)),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(child: Text(l10n.moveQuantityLabel, style: TextStyle(color: textColor, fontWeight: FontWeight.w700))),
+                TextButton(
+                  onPressed: () => setState(() => _qtyController.text = AssetMath.formatQuantity(_held)),
+                  child: Text(l10n.moveAllButton),
+                ),
+              ],
+            ),
+            TextField(
+              controller: _qtyController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+              onChanged: (_) => setState(() {}),
+              style: TextStyle(color: textColor, fontWeight: FontWeight.w700, fontSize: 20),
+              decoration: InputDecoration(
+                hintText: '0',
+                suffixText: l10n.unitsSuffix,
+                errorText: tooMuch ? l10n.sellTooMuch(AssetMath.formatQuantity(_held)) : null,
+                filled: true,
+                fillColor: fieldBg,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+            ),
+            if (partial) ...[
+              const SizedBox(height: 6),
+              Text('${l10n.moveStaysLabel}: ${l10n.sharesUnits(AssetMath.formatQuantity(_held - _qty))}',
+                  style: TextStyle(color: muted, fontSize: 12.5)),
+            ],
+            const SizedBox(height: 16),
+            Text(l10n.moveToLabel, style: TextStyle(color: textColor, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            if (inGoal) destination(Icons.inbox_outlined, l10n.holdingsUnassigned, ''),
+            if (!inGoal && goals.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Text(l10n.noGoalsYet, style: TextStyle(color: muted)),
+              ),
+            for (final g in goals) destination(IconData(g.icon, fontFamily: 'MaterialIcons'), g.name, g.id),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 void _showSellSheet(BuildContext context, AssetModel asset) {

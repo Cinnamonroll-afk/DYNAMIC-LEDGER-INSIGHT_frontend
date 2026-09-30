@@ -925,4 +925,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noteLunchSalary => 'e.g. Lunch, Salary...';
+
+  @override
+  String get holdingsTitle => 'All holdings';
+
+  @override
+  String get viewAllHoldings => 'View all holdings';
+
+  @override
+  String get holdingsHint =>
+      'Same ticker is combined across all goals. Tap a location to buy more, sell, move or delete.';
+
+  @override
+  String get holdingsEmpty => 'No holdings yet';
+
+  @override
+  String get holdingsUnassigned => 'Unassigned';
+
+  @override
+  String get moveQuantityLabel => 'Quantity to move';
+
+  @override
+  String get moveAllButton => 'All';
+
+  @override
+  String get moveToLabel => 'Move to';
+
+  @override
+  String get moveStaysLabel => 'Stays here';
 }

@@ -327,5 +327,14 @@
   "symbolLabel": "Symbol",
   "dateLabel": "Date",
   "pleaseFillAllFields": "Please fill all fields correctly",
-  "noteLunchSalary": "e.g. Lunch, Salary..."
+  "noteLunchSalary": "e.g. Lunch, Salary...",
+  "holdingsTitle": "All holdings",
+  "viewAllHoldings": "View all holdings",
+  "holdingsHint": "Same ticker is combined across all goals. Tap a location to buy more, sell, move or delete.",
+  "holdingsEmpty": "No holdings yet",
+  "holdingsUnassigned": "Unassigned",
+  "moveQuantityLabel": "Quantity to move",
+  "moveAllButton": "All",
+  "moveToLabel": "Move to",
+  "moveStaysLabel": "Stays here"
 }
